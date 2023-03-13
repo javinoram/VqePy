@@ -19,7 +19,7 @@ class hamiltonian():
     #Cicuit execution
     ansatz_circuit: QuantumCircuit = None
     backend = None
-    shots = 2**15
+    shots = 2**12
     
     #Optimization function params
     optimization_method = "" 
@@ -113,7 +113,7 @@ class hamiltonian():
             job = execute( circuit, self.backend, shots=self.shots)
             result = job.result().get_counts()
             if '0' in result:
-                func_val += h*self.nu_b*self.gyromagnetic_factor*result['0']/self.shots
+                func_val += -h*self.nu_b*self.gyromagnetic_factor*result['0']/self.shots
             else:
-                func_val -= h*self.nu_b*self.gyromagnetic_factor*result['1']/self.shots
+                func_val -= -h*self.nu_b*self.gyromagnetic_factor*result['1']/self.shots
         return func_val
