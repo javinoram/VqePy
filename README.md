@@ -1,20 +1,19 @@
-# vqesimulation for condensed matter physics
+# Project
+Research project of using VQE for the studing of condensed matter models
 
-This repository save the code for the vqe simulation of condensed matter physics
-Here, different version of the vqe method are implemented, the requirement's application are:
-1. Qiskit
-2. Numpy
-3. Scipy
-4. Plotly
+# Libraries
+1. qiskit
+2. numpy
+3. scipy
+4. plotly
+5. pandas
 
-The main idea of the code is to test the VQE performance in different models of the condensed matter
-and see the numerical error of the method.
+# Virtual enviroment
+To activate the virtual enviroment, execute the following command in the main project's folder.
 
-Javier Norambuena Leiva
+´´´ source env/bin/activate ´´´
 
+It's recommended install other libraries inside the virtual enviroment. To install the requirement file use the following command
 
-### How to use the code
-The main object is the VQEclass.py, as the name say, this is a python class where all the information of the hamiltonian
-is store in order to have in a only place the enough information to perform the calculation over the hamiltonian.
+´´´ pip3 install -r requirements.txt ´´´
 
-In this the different VQE method are defined ...
