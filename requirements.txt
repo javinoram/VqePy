@@ -1,0 +1,9 @@
+numpy
+scipy
+pennylane
+matplotlib
+pennylane-qiskit
+qiskit_ibm_provider
+pennylane-ionq
+openfermionpyscf
+pyyaml

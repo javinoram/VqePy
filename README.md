@@ -1,20 +1,34 @@
-# vqesimulation for condensed matter physics
+# Tesis project
+Project to get the degree of computer science.
 
-This repository save the code for the vqe simulation of condensed matter physics
-Here, different version of the vqe method are implemented, the requirement's application are:
-1. Qiskit
-2. Numpy
-3. Scipy
-4. Plotly
+The main idea is use variational quantum algorithms the study condensed matter's models,
+the fields of interest are the following.
+1. Spin systems
+2. 2D materials
+3. Molecules
 
-The main idea of the code is to test the VQE performance in different models of the condensed matter
-and see the numerical error of the method.
+This project didnt want to be another quantum library. This one should be see as a high level
+implementation to study systems with a fixed route to be executed, so, the user only need to give 
+a parameter's file and no programming is needed. 
 
-Javier Norambuena Leiva
+# Libraries
+1. pennylane
+2. numpy
+3. scipy
+4. matplotlib
+5. pennylane-qiskit
 
+# Requirements
+It's recommended create a virtual enviroment and install all the libraries indicated in the requiremets.txt. 
 
-### How to use the code
-The main object is the VQEclass.py, as the name say, this is a python class where all the information of the hamiltonian
-is store in order to have in a only place the enough information to perform the calculation over the hamiltonian.
+``` pip3 install -r requirements.txt ```
 
-In this the different VQE method are defined ...
+# Methods
+The method considerated to be applied in the different models are:
+1. Variational quantum eigensolver (VQE) with penalty terms
+2. VQE for structure optimization
+3. Get upper level using VQE
+4. Use VQE for upper spines
+5. Variational quantum thermalizer
+
+Not all method can be used in all types of hamiltonian.
