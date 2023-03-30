@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.linalg as la
+import math
 from qiskit import QuantumCircuit, transpile, Aer, IBMQ, BasicAer, execute
-import qiskit.quantum_info as qi
 
 def variational_hamiltonian_ansatz(xs, qubits_number, hamiltonian_terms, index_list, reps):
     qc = QuantumCircuit( qubits_number, 2)
@@ -27,40 +27,40 @@ def variational_hamiltonian_ansatz(xs, qubits_number, hamiltonian_terms, index_l
                 qc.cnot( index_list[i][1], index_list[i][2] )
     return qc   
 
-def hardware_efficient_ansatz(state, xs, qubits_number, bits_number, reps):
-    qc = QuantumCircuit( qubits_number, bits_number)
+def hardware_efficient_ansatz( spin, xs, qubits_number, bits_number, reps):
+    adjust_number = math.ceil((2*spin+1)/2.0)
+    qc = QuantumCircuit( adjust_number*qubits_number, adjust_number*bits_number)
 
-    for i in range(len(state)):
-        if state[i] == '1':
-            qc.x(i)
-
-    if qubits_number ==1:
+    if qubits_number == 1:
         for j in range(reps):
-            qc.ry( xs[j], 0)
+            for i in range(adjust_number):
+                qc.ry( xs[j], i)
     else:
         for j in range(reps-1):
+            '''
+            Ry gates added to the circuit in block
+            '''
             for i in range(qubits_number):
-                qc.ry( xs[i + qubits_number*j], i)
-            for i in range(qubits_number-1):
-                for k in range(i,qubits_number-1):
-                    qc.cz(i,k+1)
+                for k in range(adjust_number):
+                    qc.ry( xs[ i + qubits_number*j], adjust_number*i+k)
+                    #qc.ry( xs[ (i + qubits_number*j)*adjust_number +k], adjust_number*i+k)
+
+            '''
+            CZ gates added to the circuit in block
+            '''
+            for qudit_index_1 in range(qubits_number-1):
+                for qudit_index_2 in range(qudit_index_1+1, qubits_number):
+                    for qubit_index_1 in range(adjust_number):
+                        for qubit_index_2 in range(adjust_number):
+                            #print(qudit_index_1, qudit_index_2, qubit_index_1, qubit_index_2)
+                            #print(qudit_index_1*adjust_number+ qubit_index_1, qudit_index_2*adjust_number+ qubit_index_2)
+                            qc.cz(qudit_index_1*adjust_number+ qubit_index_1, qudit_index_2*adjust_number+ qubit_index_2)
         for i in range(qubits_number):
-            qc.ry(xs[i + qubits_number*(reps-1)], i)
+            for k in range(adjust_number):
+                qc.ry( xs[ i + qubits_number*(reps-1)], adjust_number*i+k)
+                #qc.ry( xs[(i + qubits_number*(reps-1))*adjust_number +k], adjust_number*i+k)
+                #qc.ry(xs[i + qubits_number*(reps-1)], qubits_number*i+k)
     return qc 
 
-'''
-VQT
-'''
-def sigmoid(x):
-    return np.exp(x) / (np.exp(x) + 1)
 
-def prob_function_ansatz(prob, qubits_number, bits_number):
-    qc = QuantumCircuit( qubits_number, bits_number)
-    for i in range(qubits_number):
-        #sigmoid_matrix = [[sigmoid(prob[i]), 0], [0, 1- sigmoid(prob[i])]]
-        #sigmoid_matrix = qi.Operator(sigmoid_matrix)
-        #qc.unitary(sigmoid_matrix, i)
-        qc.rz(prob[i], i)
-    qc.measure([i for i in range(qubits_number)], [i for i in range(qubits_number)])
-    return qc 
-
+print(hardware_efficient_ansatz( 1, [i for i in range(100)], 1, 1, 3))

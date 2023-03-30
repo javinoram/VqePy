@@ -3,3 +3,7 @@ numpy
 scipy
 plotly
 pandas
+pennylane
+seaborn
+networkx
+matplotlib

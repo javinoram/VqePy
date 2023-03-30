@@ -1,6 +1,6 @@
 import numpy as np
 import scipy as sc
-from Ansatzs import *
+from ansatzs import *
 
 
 def Magnetization(theta: list, qubit_list, number_qubits, number_ansatz_repetition, backend, shots) -> float:
