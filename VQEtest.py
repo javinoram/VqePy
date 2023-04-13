@@ -1,41 +1,33 @@
 from ansatzs import *
 from vqe_class import *
-import scipy as sc
 
 params = {
-    'hamiltonian_terms': [ (('X', -np.sqrt(2))) ],
-    'number_qubits': 1,
-    'number_ansatz_repetition': 5,
-    'backend': Aer.get_backend('qasm_simulator'),
-    'optimization_alg_params': {'tol': 1e-06, 'maxiter': 2*(1e3)},
+    'hamiltonian_terms': [ (('ZZI', 1.0)),(('IZZ', 1.0)), (('ZIZ', 1.0)) ],
+    'number_qubits': 3,
+    'number_ansatz_repetition': 3,
+    'backend': "default.qubit",
+    'optimization_alg_params': {'tol': 1e-6, 'maxiter': 600},
     'gyromagnetic_factor' : 2.0,
     'hamiltonian_vars' : {},
     'optimization_method': 'COBYLA',
-    'spin': 1
+    'spin': 0.5
 }
 
 simulation_object = hamiltonian(params)
-#xs, val = simulation_object.thermal_state_calculation( [0.0 for _ in range(3*7 + 3)] )
-xs, val = simulation_object.ground_state_calculation( [0.0 for _ in range(2*2*5 + 2)], 0.0 )
-print(val)
-#Si = np.array([[1,0],[0,1]]) 
-#Sx = np.array([[0,1],[1,0]])
-#Sy = np.array([[0,-1j],[1j,0]])
-#Sz = np.array([[1,0],[0,-1]])
+number_params = int( params['number_qubits'] * (1 + params['number_ansatz_repetition'] * 4) )
 
-Sz = np.array([[1,0,0],[0,0,0],[0,0,-1]])
-Sx = (1/np.sqrt(2))*np.array([[0,1,0],[1,0,1],[0,1,0]])
+for i in np.linspace(1,10,5):
+    print("temperatura: ", i)
+    xs, val = simulation_object.thermal_state_calculation( [np.random.randint(-300, 300) / 100  for _ in range((number_params))], 10.0 )
+    print( xs[:7] )
+    #print( simulation_object.get_observable(xs, "specific-heat", 10.0) )
+#xs, val = simulation_object.ground_state_calculation( [np.random.randint(-300, 300) / 100  for _ in range((number_params))], [0,0,0] )
+#print(val)
 
-boltz = 8.6173e-5
-t = 100.0
-
-
-#H = -np.sqrt(2)*(np.kron(Sz, Si) + np.kron(Sz, Sz) ) 
-#H=-np.sqrt(2)*np.kron(Sz,Sz)
-H=-np.sqrt(2)*Sx
-#for i in x:
-#    H = H - 2.0*5.7883818066e-5*i*(np.kron(Sz, np.kron(Si, Si))+ np.kron(Si, np.kron(Sz, Si))+ np.kron(Si, np.kron(Si, Sz)))
+Si = np.array([[1,0],[0,1]]) 
+Sx = np.array([[0,1],[1,0]])
+Sy = np.array([[0,-1j],[1j,0]])
+Sz = np.array([[1,0],[0,-1]])
+H = (np.kron(np.kron(Sz,Sz),Si) + np.kron(np.kron(Sz,Si),Sz) + np.kron(np.kron(Si,Sz),Sz))
 ee, vv = la.eigh( H )
-print(ee[:5])
-#exp_matrix = sc.linalg.expm(-H/(boltz*t))/np.trace(sc.linalg.expm(-H/(boltz*t)))
-#print(np.round(exp_matrix, 3))
+print(ee)

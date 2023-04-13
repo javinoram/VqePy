@@ -7,3 +7,4 @@ pennylane
 seaborn
 networkx
 matplotlib
+pennylane-qiskit
