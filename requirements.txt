@@ -8,3 +8,5 @@ seaborn
 networkx
 matplotlib
 pennylane-qiskit
+cmake
+openfermionpyscf

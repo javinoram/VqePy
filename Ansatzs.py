@@ -1,58 +1,20 @@
-import numpy as np
+#import numpy as np
+from pennylane import numpy as np
 import scipy.linalg as la
 import scipy as sc
 import math
 import itertools
 import pennylane as qml
-from qiskit import QuantumCircuit, transpile, Aer, IBMQ, BasicAer, execute
 
-def hardware_efficient_ansatz( spin, xs, qubits_number, bits_number, reps, state):
-    adjust_number = math.ceil((2*spin+1)/2.0)
-    qc = QuantumCircuit( adjust_number*qubits_number, adjust_number*bits_number)
-
-    rotation_params = xs[(qubits_number)*reps:]
-    controlled_params = xs[:(qubits_number)*reps]
-
-    for i, s in enumerate(state):
-        if s == 1:
-            qc.x(i)
-
-    if qubits_number == 1:
-        for j in range(reps):
-            for i in range(adjust_number):
-                qc.ry( xs[j], i)
-    else:
-        for j in range(reps-1):
-            '''
-            Ry gates added to the circuit in block
-            '''
-            for i in range(qubits_number):
-                for k in range(adjust_number):
-                    qc.rz( rotation_params[0+ (i + qubits_number*j)*3], adjust_number*i+k)
-                    qc.ry( rotation_params[1+ (i + qubits_number*j)*3], adjust_number*i+k)
-                    qc.rx( rotation_params[2+ (i + qubits_number*j)*3], adjust_number*i+k)
-
-            '''
-            CZ gates added to the circuit in block
-            '''
-            for qubit_index in range(qubits_number):
-                qc.crx(controlled_params[2*j + qubit_index], qubit_index, (qubit_index+1)%qubits_number)
-            #for qudit_index_1 in range(qubits_number-1):
-            #    for qudit_index_2 in range(qudit_index_1+1, qubits_number):
-            #        for qubit_index_1 in range(adjust_number):
-            #            for qubit_index_2 in range(adjust_number):
-            #                qc.cz(qudit_index_1*adjust_number+ qubit_index_1, qudit_index_2*adjust_number+ qubit_index_2)
-        for i in range(qubits_number):
-            for k in range(adjust_number):
-                qc.rz( rotation_params[0+ (i + qubits_number*(reps-1))*3], adjust_number*i+k)
-                qc.ry( rotation_params[1+ (i + qubits_number*(reps-1))*3], adjust_number*i+k)
-                qc.rx( rotation_params[2+ (i + qubits_number*(reps-1))*3], adjust_number*i+k)
-    return qc 
 
 def prob_dist(params):
     return np.vstack([sigmoid(params), 1 - sigmoid(params)]).T
 
 def sigmoid(x):
+    #aux = []
+    #for i in x:
+    #    aux.append( math.exp(i)/ (math.exp(i) + 1) )
+    #return np.array(aux)
     return np.exp(x) / (np.exp(x) + 1)
 
 def calculate_entropy(distribution):
@@ -65,8 +27,19 @@ def single_rotation(phi_params, qubits):
     rotations = ["Z", "Y", "X"]
     for i in range(0, len(rotations)):
         qml.AngleEmbedding(phi_params[i], wires=qubits, rotation=rotations[i])
+    
+def number_rotation_params(rotation_set, qubits, reps):
+        return len(rotation_set)*qubits*reps
 
-        
+def number_nonlocal_params(text, qubits, reps):
+    if text=='chain':
+        return int( (qubits-1)*reps )
+    elif text=='ring':
+        return int( qubits*reps )
+    elif text=='all_to_all':
+        return int( (qubits/2)*(qubits-1)*reps )
+    else:
+        return 0
 
 conts_spin = {"0.5": {"1": { '0':1, '1':-1, },
                       "2": {'00':1, '11':1, '01': -1, '10':-1}
