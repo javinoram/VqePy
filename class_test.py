@@ -29,7 +29,8 @@ params_alg = {
 }
 
 VQE = variational_quantum_eigensolver(params_hamiltonian, params_ansatz, params_alg)
-
+spin = 1
+correction = math.ceil( (int( 2*spin+1 ))/2  )
 print(VQE.number_qubits)
 print(VQE.hamiltonian_object)
 print(VQE.hamiltonian_index)
@@ -37,5 +38,5 @@ print(VQE.hamiltonian_index)
 
 number = VQE.number_nonlocal + VQE.number_rotations
 theta = np.array( [np.random.randint(-300, 300) / 100  for _ in range(number)])
-print(VQE.cost_function_VQE(theta, [0,0,0]))
-#print(VQE.ground_state_calculation(theta, 2))
+#print(VQE.cost_function_VQE(theta, [0,0,0,0,0,0]))
+print(VQE.ground_state_calculation(theta, 2))

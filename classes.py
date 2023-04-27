@@ -3,6 +3,22 @@ from pennylane import qchem
 from pennylane import numpy as np
 #from physics_formulas import *
 
+conts_spin = {"0.5": {"1": { '0':1, '1':-1, },
+                      "2": {'00':1, '11':1, '01': -1, '10':-1}
+                      },
+            "1": {"1": {'00':1, '01':0, '10':-1, '11':0},
+                      "2": {'0000':1, '1010':1, '0010': -1, '1000':-1}
+                      },
+            "1.5": {"1": {'00':3/2, '01':1/2, '10':-1/2, '11':-3/2},
+                    "2": {'0000':9/4, '0001':3/4, '0010':-3/4, '0011':-9/4, 
+                          '0100':3/4, '0101':1/4, '0110':-1/4, '0111':-3/4,
+                          '1000':-3/4, '1001':-1/4, '1010':1/4, '1011':-3/4,
+                          '1100':-9/4, '1101':-3/4, '1110':3/4, '1111':9/4}  },
+            "2": {"1": {'000':2, '001':1, '010':0, '011':-1, '100':2},
+                      },
+            "2.5": {"1": {'000':5/2, '001':3/2, '010':1/2, '011':-1/2, '100':-3/2, '101':-5/2},
+                      },
+            }
 '''
 class hamiltonian():
     #Class variables
@@ -106,12 +122,15 @@ class hamiltonian():
                 if string != 'I': aux.append(i)
             self.hamiltonian_index.append(aux)
 
-        for term in params['hamiltonian_list']:
-            aux = {}
-            for i in range(self.number_qubits):
-                aux[i] = term[0][i]
-            ham_matrix[qml.pauli.PauliWord(aux)] = term[1] 
-        self.hamiltonian_object = qml.pauli.PauliSentence(ham_matrix).hamiltonian([i for i in range(self.number_qubits)])
+        if self.spin == 0.5:
+            for term in params['hamiltonian_list']:
+                aux = {}
+                for i in range(self.number_qubits):
+                    aux[i] = term[0][i]
+                ham_matrix[qml.pauli.PauliWord(aux)] = term[1] 
+            self.hamiltonian_object = qml.pauli.PauliSentence(ham_matrix).hamiltonian([i for i in range(self.number_qubits)])
+        else:
+            self.hamiltonian_object = params['hamiltonian_list']
         pass
 
 class ansatz():
@@ -132,21 +151,30 @@ class ansatz():
         self.number_nonlocal = number_nonlocal_params(self.ansatz_pattern, qubits, self.repetition)
         return 
 
-    def single_rotation(self, phi_params, qubits):
-        for i in range(0, len(self.rotation_set)):
-            qml.AngleEmbedding(phi_params[i], wires=qubits, rotation=self.rotation_set[i])
+    def single_rotation(self, phi_params, qubits, spin):
+        correction = math.ceil( (int( 2*spin+1 ))/2  )
+        for i in range( 0, qubits):
+            for j in range(correction):
+                qml.RZ(phi_params[i][0], wires=[correction*i+j])
+                qml.RY(phi_params[i][1], wires=[correction*i+j])
+                qml.RX(phi_params[i][2], wires=[correction*i+j])
 
-    def quantum_circuit(self, qubits, rotation_params, coupling_params, wire, sample=None, system_object=None):
-        qml.BasisState(sample, wires=range(qubits))
+    def quantum_circuit(self, qubits, spin,  rotation_params, coupling_params, wire, sample=None, system_object=None):
+        correction = math.ceil( (int( 2*spin+1 ))/2  )
+        qml.BasisState(sample, wires=range(correction*qubits))
         for i in range(0, self.repetition):
-            single_rotation(rotation_params[i], range(qubits))
-            qml.broadcast(
-                unitary=qml.CRX, pattern=self.ansatz_pattern,
-                wires=range(qubits), parameters=coupling_params[i]
-            )
+            single_rotation(rotation_params[i], qubits, spin)
+            #qml.broadcast(
+            #    unitary=qml.CRX, pattern=self.ansatz_pattern,
+            #    wires=range(qubits), parameters=coupling_params[i]
+            #)
 
         if system_object == None:
-            return qml.probs(wires=wire)
+            aux = []
+            for w in wire:
+                for i in range(correction):
+                    aux.append( correction*w + i)
+            return qml.counts(wires=aux)
         else:
             return qml.expval(system_object)
 
@@ -164,7 +192,8 @@ class variational_quantum_eigensolver(hamiltonian, ansatz):
             self.init_hamiltonian_list(params_hamiltonian)
         self.init_ansatz(params_ansatz, self.number_qubits)
 
-        self.dev = qml.device(params_alg['backend'], wires=self.number_qubits)
+        correction = math.ceil( (int( 2*self.spin+1 ))/2  )
+        self.dev = qml.device(params_alg['backend'], wires=correction*self.number_qubits, shots=1000)
         self.node = qml.QNode(self.quantum_circuit, self.dev, interface="autograd")
 
         self.optimization_alg_params = params_alg['optimization_alg_params'],
@@ -175,7 +204,7 @@ class variational_quantum_eigensolver(hamiltonian, ansatz):
         hf = qml.qchem.hf_state(electrons, self.number_qubits)
         general_cost_function = lambda theta: self.cost_function_VQE(theta, hf)
         xs = sc.optimize.minimize(general_cost_function, theta, method=self.optimization_method,
-                                  options=self.optimization_alg_params)['x']
+                                options=self.optimization_alg_params)['x']
         return xs, general_cost_function(xs)
 
     def cost_function_VQE(self, theta: list, state: list) -> float:
@@ -188,11 +217,16 @@ class variational_quantum_eigensolver(hamiltonian, ansatz):
             rotation.append(np.split(s, 3))
 
         if self.spin != 0.5:
-            for term in self.hamiltonian_index:
-                result = self.node( qubits= self.number_qubits, rotation_params = rotation, 
-                    coupling_params = coupling, wire = term, sample=state )
-                print(result)
+            result= 0.0
+            for i, term in enumerate(self.hamiltonian_index):
+                result_term = self.node( qubits= self.number_qubits, spin=self.spin, rotation_params = rotation, coupling_params = coupling, wire = term, sample=state )
+                for _, dict_term in enumerate( conts_spin[ str(self.spin) ]["2"] ):
+                    if dict_term in result_term:
+                        exchange = self.hamiltonian_object[i][1]
+                        prob = result_term[dict_term]/1000.0
+                        const_state = conts_spin[ str(self.spin) ]["2"][dict_term]
+                        result += exchange*prob*const_state
         else:
-            result = self.node( qubits= self.number_qubits, rotation_params = rotation, 
+            result = self.node( qubits= self.number_qubits, spin=self.spin, rotation_params = rotation, 
                 coupling_params = coupling, wire = range(self.number_qubits), sample=state, system_object= self.hamiltonian_object )
         return result
