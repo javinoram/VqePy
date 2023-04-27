@@ -11,6 +11,11 @@ import numpy as np
 #    'method': "dhf",
 #}
 
+si = np.array([[1,0,0], [0,1,0], [0,0,1]])
+sz = np.array([[1,0,0], [0,0,0], [0,0,-1]])
+
+h = -2*np.kron(sz,np.kron(sz, si)) -2*np.kron(si,np.kron(sz, sz)) -2*np.kron(sz,np.kron(si, sz))
+
 params_hamiltonian = {
     'hamiltonian_list':[(('ZZI', -2)), (('IZZ', -2)), (('ZIZ', -2))],
     'spin': 1
@@ -25,7 +30,7 @@ params_ansatz = {
 params_alg = {
     'backend': "default.qubit",
     'optimization_alg_params': {'tol': 1e-6, 'maxiter': 1000},
-    'optimization_method': 'COBYLA',
+    'optimization_method': 'COBYLA'
 }
 
 VQE = variational_quantum_eigensolver(params_hamiltonian, params_ansatz, params_alg)
@@ -38,5 +43,6 @@ print(VQE.hamiltonian_index)
 
 number = VQE.number_nonlocal + VQE.number_rotations
 theta = np.array( [np.random.randint(-300, 300) / 100  for _ in range(number)])
-#print(VQE.cost_function_VQE(theta, [0,0,0,0,0,0]))
-print(VQE.ground_state_calculation(theta, 2))
+print( VQE.ground_state_calculation(theta, 2) )
+
+print( np.linalg.eigvals(h)[:4] )

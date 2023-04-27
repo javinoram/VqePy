@@ -1,6 +1,8 @@
 from ansatzs import *
 from pennylane import qchem
 from pennylane import numpy as np
+import scipy.linalg as la
+import scipy as sc
 #from physics_formulas import *
 
 conts_spin = {"0.5": {"1": { '0':1, '1':-1, },
@@ -163,7 +165,7 @@ class ansatz():
         correction = math.ceil( (int( 2*spin+1 ))/2  )
         qml.BasisState(sample, wires=range(correction*qubits))
         for i in range(0, self.repetition):
-            single_rotation(rotation_params[i], qubits, spin)
+            self.single_rotation(rotation_params[i], qubits, spin)
             #qml.broadcast(
             #    unitary=qml.CRX, pattern=self.ansatz_pattern,
             #    wires=range(qubits), parameters=coupling_params[i]
@@ -182,8 +184,8 @@ class variational_quantum_eigensolver(hamiltonian, ansatz):
     dev = None
     node = None
     backend = None
-    optimization_method = None
-    optimization_alg_params = None
+    optimization_method = ""
+    optimization_alg_params = {}
 
     def __init__(self, params_hamiltonian, params_ansatz, params_alg) -> None:
         if 'file_name' in params_hamiltonian:
@@ -193,7 +195,7 @@ class variational_quantum_eigensolver(hamiltonian, ansatz):
         self.init_ansatz(params_ansatz, self.number_qubits)
 
         correction = math.ceil( (int( 2*self.spin+1 ))/2  )
-        self.dev = qml.device(params_alg['backend'], wires=correction*self.number_qubits, shots=1000)
+        self.dev = qml.device(params_alg['backend'], wires=correction*self.number_qubits, shots=3000)
         self.node = qml.QNode(self.quantum_circuit, self.dev, interface="autograd")
 
         self.optimization_alg_params = params_alg['optimization_alg_params'],
@@ -201,10 +203,11 @@ class variational_quantum_eigensolver(hamiltonian, ansatz):
         pass
 
     def ground_state_calculation(self, theta: list, electrons: int ) -> float:
-        hf = qml.qchem.hf_state(electrons, self.number_qubits)
+        correction = math.ceil( (int( 2*self.spin+1 ))/2  )
+        hf = qml.qchem.hf_state(electrons*correction, self.number_qubits*correction)
         general_cost_function = lambda theta: self.cost_function_VQE(theta, hf)
-        xs = sc.optimize.minimize(general_cost_function, theta, method=self.optimization_method,
-                                options=self.optimization_alg_params)['x']
+        xs = sc.optimize.minimize(general_cost_function, theta, method=self.optimization_method[0],
+                                options=self.optimization_alg_params[0])['x']
         return xs, general_cost_function(xs)
 
     def cost_function_VQE(self, theta: list, state: list) -> float:
@@ -223,7 +226,7 @@ class variational_quantum_eigensolver(hamiltonian, ansatz):
                 for _, dict_term in enumerate( conts_spin[ str(self.spin) ]["2"] ):
                     if dict_term in result_term:
                         exchange = self.hamiltonian_object[i][1]
-                        prob = result_term[dict_term]/1000.0
+                        prob = result_term[dict_term]/3000.0
                         const_state = conts_spin[ str(self.spin) ]["2"][dict_term]
                         result += exchange*prob*const_state
         else:
