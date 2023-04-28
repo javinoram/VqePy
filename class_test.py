@@ -4,7 +4,9 @@ from pennylane import qchem
 import numpy as np
 
 #params_hamiltonian = {
-#    'file_name': 'h2.xyz',
+    #'file_name': 'h2.xyz',
+#    'symbols': ["H", "H"],
+#    'coordinates': np.array([0.0, 0.0, -0.37, 0.0, 0.0,  0.37]),
 #    'charge': 0,
 #    'mult': 1,
 #    'basis': "sto-3g",
@@ -23,7 +25,7 @@ params_hamiltonian = {
 
 params_ansatz = {
     'repetition': 3,
-    'ansatz_pattern': 'all_to_all',
+    'ansatz_pattern': 'chain',
     'rotation_set': ['Z', 'Y', 'X']
 }
 
@@ -32,6 +34,7 @@ params_alg = {
     'optimization_alg_params': {'tol': 1e-6, 'maxiter': 1000},
     'optimization_method': 'COBYLA'
 }
+
 
 VQE = variational_quantum_eigensolver(params_hamiltonian, params_ansatz, params_alg)
 spin = 1
@@ -45,4 +48,4 @@ number = VQE.number_nonlocal + VQE.number_rotations
 theta = np.array( [np.random.randint(-300, 300) / 100  for _ in range(number)])
 print( VQE.ground_state_calculation(theta, 2) )
 
-print( np.linalg.eigvals(h)[:4] )
+print( np.linalg.eigvals(h) )
