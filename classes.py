@@ -3,7 +3,8 @@ from pennylane import qchem
 from pennylane import numpy as np
 import scipy.linalg as la
 import scipy as sc
-#from physics_formulas import *
+
+bohr_angs = 0.529177210903
 
 conts_spin = {"0.5": {"1": { '0':1, '1':-1, },
                       "2": {'00':1, '11':1, '01': -1, '10':-1}
@@ -102,16 +103,19 @@ class hamiltonian():
     def __init__(self) -> None:
         pass
 
-    def init_hamiltonian_file(self, file_name, params) -> None:
-        symbols, coordinates = qchem.read_structure( file_name )
+    #def init_hamiltonian_file(self, file_name, params) -> None:
+    def init_hamiltonian_file(self, params) -> None:
+        #symbols, coordinates = qchem.read_structure( file_name )
         hamiltonian, qubits = qchem.molecular_hamiltonian(
-            symbols, coordinates,
+            symbols = params['symbols'],
+            coordinates = params['coordinates'],
             charge= params['charge'],
             mult= params['mult'],
             basis= params['basis'],
             method= params['method'])
         self.hamiltonian_object = hamiltonian
         self.number_qubits = qubits
+        self.spin = 0.5
         pass
 
     def init_hamiltonian_list(self, params) -> None:
@@ -154,18 +158,39 @@ class ansatz():
         return 
 
     def single_rotation(self, phi_params, qubits, spin):
+        phi_params = np.array(phi_params).T
         correction = math.ceil( (int( 2*spin+1 ))/2  )
         for i in range( 0, qubits):
             for j in range(correction):
                 qml.RZ(phi_params[i][0], wires=[correction*i+j])
                 qml.RY(phi_params[i][1], wires=[correction*i+j])
                 qml.RX(phi_params[i][2], wires=[correction*i+j])
+        return
+
+    def non_local_gates(self, phi_params, qubits, spin):
+        correction = math.ceil( (int( 2*spin+1 ))/2  )
+
+        if self.ansatz_pattern == 'chain':
+            for i in range(0, qubits-1):
+                for j in range(correction):
+                    qml.CRX(phi_params[i], [correction*i+j, correction*(i+1)+j])
+        if self.ansatz_pattern == 'ring':
+            if qubits == 2:
+                for j in range(correction):
+                    qml.CRX(phi_params[i], [j, correction+j])
+            else:
+                for i in range(0, qubits-1):
+                    for j in range(correction):
+                        qml.CRX(phi_params[i], [correction*i+j, correction*(i+1)+j])
+        return
 
     def quantum_circuit(self, qubits, spin,  rotation_params, coupling_params, wire, sample=None, system_object=None):
         correction = math.ceil( (int( 2*spin+1 ))/2  )
         qml.BasisState(sample, wires=range(correction*qubits))
         for i in range(0, self.repetition):
             self.single_rotation(rotation_params[i], qubits, spin)
+            #qml.DoubleExcitation(coupling_params[i][0], wires=[0, 1, 2, 3])
+            self.non_local_gates(coupling_params[i], qubits, spin)
             #qml.broadcast(
             #    unitary=qml.CRX, pattern=self.ansatz_pattern,
             #    wires=range(qubits), parameters=coupling_params[i]
@@ -188,8 +213,8 @@ class variational_quantum_eigensolver(hamiltonian, ansatz):
     optimization_alg_params = {}
 
     def __init__(self, params_hamiltonian, params_ansatz, params_alg) -> None:
-        if 'file_name' in params_hamiltonian:
-            self.init_hamiltonian_file(params_hamiltonian['file_name'], params_hamiltonian)
+        if 'symbols' in params_hamiltonian:
+            self.init_hamiltonian_file(params_hamiltonian)
         else:
             self.init_hamiltonian_list(params_hamiltonian)
         self.init_ansatz(params_ansatz, self.number_qubits)
@@ -202,13 +227,14 @@ class variational_quantum_eigensolver(hamiltonian, ansatz):
         self.optimization_method = params_alg['optimization_method'],
         pass
 
-    def ground_state_calculation(self, theta: list, electrons: int ) -> float:
+    def ground_state_calculation(self, theta: list, electrons: int ):
         correction = math.ceil( (int( 2*self.spin+1 ))/2  )
         hf = qml.qchem.hf_state(electrons*correction, self.number_qubits*correction)
         general_cost_function = lambda theta: self.cost_function_VQE(theta, hf)
         xs = sc.optimize.minimize(general_cost_function, theta, method=self.optimization_method[0],
                                 options=self.optimization_alg_params[0])['x']
         return xs, general_cost_function(xs)
+    
 
     def cost_function_VQE(self, theta: list, state: list) -> float:
         ansatz_params_1 = theta[0 :self.number_nonlocal]
@@ -232,4 +258,5 @@ class variational_quantum_eigensolver(hamiltonian, ansatz):
         else:
             result = self.node( qubits= self.number_qubits, spin=self.spin, rotation_params = rotation, 
                 coupling_params = coupling, wire = range(self.number_qubits), sample=state, system_object= self.hamiltonian_object )
+            print(result)
         return result

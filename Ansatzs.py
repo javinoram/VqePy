@@ -10,10 +10,6 @@ def prob_dist(params):
     return np.vstack([sigmoid(params), 1 - sigmoid(params)]).T
 
 def sigmoid(x):
-    #aux = []
-    #for i in x:
-    #    aux.append( math.exp(i)/ (math.exp(i) + 1) )
-    #return np.array(aux)
     return np.exp(x) / (np.exp(x) + 1)
 
 def calculate_entropy(distribution):
