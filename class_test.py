@@ -1,7 +1,8 @@
-from ansatzs import *
-from classes import *
-from pennylane import qchem
-import numpy as np
+from classes.variational import *
+from classes.ansatz import *
+from classes.global_func import *
+from classes.hamiltonian import *
+
 
 #params_hamiltonian = {
     #'file_name': 'h2.xyz',
