@@ -1,12 +1,10 @@
-qiskit
 numpy
 scipy
-plotly
-pandas
 pennylane
-seaborn
-networkx
 matplotlib
 pennylane-qiskit
-cmake
+qiskit_ibm_provider
+pennylane-cirq
+pennylane-ionq
 openfermionpyscf
+pyyaml
