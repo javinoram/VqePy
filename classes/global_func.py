@@ -32,7 +32,6 @@ def number_nonlocal_params(text, qubits, reps):
     else:
         return 0
 
-
 bohr_angs = 0.529177210903
 
 conts_spin = {"0.5": {"1": { '0':1, '1':-1, },

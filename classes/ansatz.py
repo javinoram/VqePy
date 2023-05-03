@@ -5,70 +5,91 @@ from pennylane import qchem
 from pennylane import numpy as np
 import scipy.linalg as la
 import scipy as sc
-from global_func import *
+from classes.global_func import *
 
 class ansatz():
+    '''For Spin hamiltonians'''
     repetition: int = 0
     ansatz_pattern: str = ""
-    number_rotations: int = 0
-    number_nonlocal: int = 0
+    number_params: list = []
     rotation_set: list = []
+
+    '''For Electronic hamiltonians'''
+    hf_state: list = None
+    singles: list = []
+    doubles: list = []
 
     def __init__(self) -> None:
         pass
 
-    def init_ansatz(self, params, qubits) -> None:
-        self.repetition = params['repetition']
-        self.ansatz_pattern = params['ansatz_pattern']
-        self.rotation_set = params['rotation_set']
-        self.number_rotations = number_rotation_params(self.rotation_set, qubits, self.repetition)
-        self.number_nonlocal = number_nonlocal_params(self.ansatz_pattern, qubits, self.repetition)
+    def init_ansatz(self, params, qubits, type_hamiltonian) -> None:
+        if type_hamiltonian == "electronic":
+            self.repetition = params['repetition']
+            self.singles, self.doubles = qml.qchem.excitations(params['electrons'], qubits)
+            self.number_params = (len(self.singles) + len(self.doubles))*self.repetition
+        else:
+            self.repetition = params['repetition']
+            self.ansatz_pattern = params['ansatz_pattern']
+            self.rotation_set = params['rotation_set']
+            self.number_params = [number_rotation_params(self.rotation_set, qubits, self.repetition), 
+                                  number_nonlocal_params(self.ansatz_pattern, qubits, self.repetition)]
         return 
+    
 
-    def single_rotation(self, phi_params, qubits, spin):
-        phi_params = np.array(phi_params).T
-        correction = math.ceil( (int( 2*spin+1 ))/2  )
+    '''Given ansatz functions'''
+    def simple_given_rotations(self, params):
+        if len(self.singles) == 0: return
+        for i, term in enumerate(self.singles):
+            qml.SingleExcitation(params[i], wires=term)
+        return
+    
+    def double_given_rotations(self, params):
+        if len(self.doubles) == 0: return
+        for i, term in enumerate(self.doubles):
+            qml.DoubleExcitation(params[i], wires=term)
+        return
+    
+    def given_circuit(self, qubits, params, hamiltonian, init_state=None):
+        qml.BasisState(init_state, wires=range(qubits))
+        for i in range(0, self.repetition):
+            self.simple_given_rotations( params[0] )
+            self.double_given_rotations( params[1] )
+        return qml.expval(hamiltonian)
+
+
+    '''Spin ansatz functions'''
+    def single_rotation(self, params, qubits, correction):
         for i in range( 0, qubits):
             for j in range(correction):
-                qml.RZ(phi_params[i][0], wires=[correction*i+j])
-                qml.RY(phi_params[i][1], wires=[correction*i+j])
-                qml.RX(phi_params[i][2], wires=[correction*i+j])
+                qml.RZ(params[i][0], wires=[correction*i+j])
+                qml.RY(params[i][1], wires=[correction*i+j])
+                qml.RX(params[i][2], wires=[correction*i+j])
         return
 
-    def non_local_gates(self, phi_params, qubits, spin):
-        correction = math.ceil( (int( 2*spin+1 ))/2  )
-
+    def non_local_gates(self, params, qubits, correction):
         if self.ansatz_pattern == 'chain':
             for i in range(0, qubits-1):
                 for j in range(correction):
-                    qml.CRX(phi_params[i], [correction*i+j, correction*(i+1)+j])
+                    qml.CRX(params[i], [correction*i+j, correction*(i+1)+j])
         if self.ansatz_pattern == 'ring':
             if qubits == 2:
                 for j in range(correction):
-                    qml.CRX(phi_params[i], [j, correction+j])
+                    qml.CRX(params[i], [j, correction+j])
             else:
                 for i in range(0, qubits-1):
                     for j in range(correction):
-                        qml.CRX(phi_params[i], [correction*i+j, correction*(i+1)+j])
+                        qml.CRX(params[i], [correction*i+j, correction*(i+1)+j])
         return
 
-    def quantum_circuit(self, qubits, spin,  rotation_params, coupling_params, wire, sample=None, system_object=None):
-        correction = math.ceil( (int( 2*spin+1 ))/2  )
-        qml.BasisState(sample, wires=range(correction*qubits))
-        for i in range(0, self.repetition):
-            self.single_rotation(rotation_params[i], qubits, spin)
-            #qml.DoubleExcitation(coupling_params[i][0], wires=[0, 1, 2, 3])
-            self.non_local_gates(coupling_params[i], qubits, spin)
-            #qml.broadcast(
-            #    unitary=qml.CRX, pattern=self.ansatz_pattern,
-            #    wires=range(qubits), parameters=coupling_params[i]
-            #)
+    def spin_circuit(self, qubits, correction, params, wire, init_state=None, system_object=None):
+        qml.BasisState(init_state, wires=range(correction*qubits))
 
-        if system_object == None:
-            aux = []
-            for w in wire:
-                for i in range(correction):
-                    aux.append( correction*w + i)
-            return qml.counts(wires=aux)
-        else:
-            return qml.expval(system_object)
+        for i in range(0, self.repetition):
+            self.single_rotation(params[0][i], qubits, correction)
+            self.non_local_gates(params[1][i], qubits, correction)
+
+        aux = []
+        for w in wire:
+            for i in range(correction):
+                aux.append( correction*w + i)
+        return qml.counts(wires=aux)
