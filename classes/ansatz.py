@@ -9,22 +9,21 @@ class Spin_ansatz():
     repetition: int = 0
     ansatz_pattern: str = ""
     number_params: list = []
-    rotation_set: list = []
 
     def __init__(self, params, qubits) -> None:
         self.repetition = params['repetition']
         self.ansatz_pattern = params['ansatz_pattern']
         self.rotation_set = params['rotation_set']
-        self.number_params = [number_rotation_params(self.rotation_set, qubits, self.repetition), 
+        self.number_params = [number_rotation_params(qubits, self.repetition), 
             number_nonlocal_params(self.ansatz_pattern, qubits, self.repetition)]
         return
 
     def single_rotation(self, params, qubits, correction):
         for i in range( 0, qubits):
             for j in range(correction):
-                qml.RZ(params[i][0], wires=[correction*i+j])
-                qml.RY(params[i][1], wires=[correction*i+j])
-                qml.RX(params[i][2], wires=[correction*i+j])
+                qml.RZ(params[0], wires=[correction*i+j])
+                qml.RY(params[1], wires=[correction*i+j])
+                qml.RX(params[2], wires=[correction*i+j])
         return
 
     def non_local_gates(self, params, qubits, correction):
@@ -42,11 +41,12 @@ class Spin_ansatz():
                         qml.CRX(params[i], [correction*i+j, correction*(i+1)+j])
         return
 
-    def spin_circuit(self, qubits, correction, params, wire, init_state=None):
-        qml.BasisState(init_state, wires=range(correction*qubits))
+    def spin_circuit(self, qubits, correction, params, wire):
+        qml.BasisState([0 for _ in range(qubits*correction)], wires=range(correction*qubits))
+        nonlocal_per_iter = math.floor(self.number_params[1]/self.repetition)
         for i in range(0, self.repetition):
-            self.single_rotation(params[0][i], qubits, correction)
-            self.non_local_gates(params[1][i], qubits, correction)
+            self.single_rotation(params[0][i*3:3*(i+1)], qubits, correction)
+            self.non_local_gates(params[1][nonlocal_per_iter*i:nonlocal_per_iter*(i+1)], qubits, correction)
 
         aux = []
         for w in wire:

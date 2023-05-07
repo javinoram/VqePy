@@ -19,8 +19,8 @@ def calculate_entropy(distribution):
         total_entropy += -1 * d[0] * np.log(d[0]) + -1 * d[1] * np.log(d[1])
     return total_entropy
     
-def number_rotation_params(rotation_set, qubits, reps):
-        return len(rotation_set)*qubits*reps
+def number_rotation_params(qubits, reps):
+        return 3*qubits*reps
 
 def number_nonlocal_params(text, qubits, reps):
     if text=='chain':
