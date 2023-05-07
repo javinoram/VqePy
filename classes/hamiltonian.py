@@ -1,48 +1,99 @@
-import pennylane as qml
 from pennylane import qchem
-from pennylane import numpy as np
-import scipy.linalg as la
-import scipy as sc
-from classes.global_func import *
+from classes.ansatz import *
 
-class hamiltonian():
-    hamiltonian_type = ""
+
+class electronic_hamiltonian(Given_ansatz):
+    hamiltonian_object = None
+    number_qubits = None
+    coordinates = None
+    symbols = None
+    extra = None
+
+    dev = None
+    node = None
+    optimization_method = ""
+    optimization_alg_params = {}
+
+    def __init__(self, params, params_alg) -> None:
+        _, qubits = qchem.molecular_hamiltonian(
+            symbols = params['symbols'],
+            coordinates = params['coordinates'],)
+        self.number_qubits = qubits
+        self.symbols = params['symbols']
+        self.coordinates = params['coordinates']
+
+        self.dev = qml.device(params_alg['backend'], wires=self.number_qubits)
+        self.node = qml.QNode(self.given_circuit, self.dev, interface="autograd")
+        self.optimization_alg_params = params_alg['optimization_alg_params'],
+        self.optimization_method = params_alg['optimization_method'],
+        return
+        
+    def init_ansatz(self, params):
+        self.repetition = params['repetition']
+        self.hf_state = qml.qchem.hf_state(params['electrons'], self.number_qubits)
+        self.singles, self.doubles = qml.qchem.excitations(params['electrons'], self.number_qubits)
+        self.number_params = [len(self.singles)*self.repetition, len(self.doubles)*self.repetition]
+        return
+    
+    '''
+    Method to execute the minimization algorithms
+    '''
+    def structure_calculation(self, theta: list):
+        theta = np.concatenate((self.coordinates, theta), axis=0)
+        xs = sc.optimize.minimize(self.cost_function_structure, theta, method=self.optimization_method[0],
+                                options=self.optimization_alg_params[0])['x']
+        self.coordinates = xs[:3*len(self.symbols)]
+        self.hamiltonian_object, _ = qchem.molecular_hamiltonian(
+            symbols = self.symbols,
+            coordinates = self.coordinates) 
+        return np.round(xs[:3*len(self.symbols)],4)
+    
+    def ground_state_calculation(self, theta: list):
+        xs = sc.optimize.minimize(self.cost_function_VQE, theta, method=self.optimization_method[0],
+                                options=self.optimization_alg_params[0])['x']
+        return xs, self.cost_function_VQE(xs)
+    
+    '''
+    Cost functions for VQE and optimization structure
+    '''
+    def cost_function_VQE(self, theta: list) -> float:
+        params_1 = theta[ :self.number_params[0]]
+        params_2 = theta[self.number_params[0]: ]
+        result = self.node( qubits= self.number_qubits, params = [params_1, params_2], hamiltonian=self.hamiltonian_object)
+        return result
+    
+    def cost_function_structure(self, theta):
+        params_1 = theta[ :len(self.coordinates)]
+        params_2 = theta[len(self.coordinates): ]
+
+        params_21 = params_2[ :self.number_params[0]]
+        params_22 = params_2[self.number_params[0]: ]
+
+        hamiltonian, qubits = qchem.molecular_hamiltonian( symbols = self.symbols, coordinates = params_1)
+        result = self.node(qubits, [params_21, params_22], hamiltonian)
+        return result
+
+
+class spin_hamiltonian(Spin_ansatz, ):
     hamiltonian_object = None
     hamiltonian_index = []
     number_qubits = None
-    spin = 0.5
+    spin: int = 0
+    correction: int = 0
 
+    def __init__(self, params) -> None:
+        self.number_qubits = len(params['hamiltonian_list'][0][0])
+        self.spin = params['spin']
+        self.correction = math.ceil( (int( 2*self.spin+1 ))/2  )
+        for term in params['hamiltonian_list']:
+            aux = []
+            for i, string in enumerate(term[0]):
+                if string != 'I': aux.append(i)
+            self.hamiltonian_index.append(aux)
+        self.hamiltonian_object = params['hamiltonian_list']
+        self.hamiltonian_type = "spin"
+        return
+
+class hubbard_hamiltonian():
     def __init__(self) -> None:
         pass
-
-    def init_hamiltonian_file(self, params) -> None:
-        if self.hamiltonian_object != None:
-            raise "Hamiltonian object already setup"
-        else:
-            hamiltonian, qubits = qchem.molecular_hamiltonian(
-                symbols = params['symbols'],
-                coordinates = params['coordinates'],
-                charge= params['charge'],
-                mult= params['mult'],
-                basis= params['basis'],
-                method= params['method'])
-            self.hamiltonian_object = hamiltonian
-            self.number_qubits = qubits
-            self.spin = 0.5
-            self.hamiltonian_type = "electronic"
-        return 
-
-    def init_hamiltonian_list(self, params) -> None:
-        if self.hamiltonian_object != None:
-            raise "Hamiltonian object already setup"
-        else:
-            self.number_qubits = len(params['hamiltonian_list'][0][0])
-            self.spin = params['spin']
-            for term in params['hamiltonian_list']:
-                aux = []
-                for i, string in enumerate(term[0]):
-                    if string != 'I': aux.append(i)
-                self.hamiltonian_index.append(aux)
-            self.hamiltonian_object = params['hamiltonian_list']
-            self.hamiltonian_type = "spin"
-        return
