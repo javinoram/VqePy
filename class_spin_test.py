@@ -5,7 +5,7 @@ from classes.hamiltonian import *
 
 params_hamiltonian = {
     "hamiltonian_list": [(("ZZI", -1)), (("IZZ", -1)), (("ZIZ", -1))],
-    "spin": 1
+    "spin": 0.5
 }
 
 params_ansatz = {

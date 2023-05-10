@@ -80,3 +80,32 @@ class Given_ansatz():
             for i, term in enumerate(self.doubles):
                 qml.DoubleExcitation(params[1][i], wires=term)
         return qml.expval(hamiltonian)
+    
+
+class Given_ansatz_hubbard():
+    repetition: int = 0
+    singles: list = []
+    doubles: list = []
+    number_params: list = []
+    hf_state = None
+
+    def __init__(self, params, qubits) -> None:
+        self.repetition = params['repetition']
+        self.singles, self.doubles = qml.qchem.excitations(params['electrons'], qubits)
+        self.number_params = [len(self.singles)*self.repetition, len(self.doubles)*self.repetition]
+        return
+    
+    def given_circuit(self, qubits, params, wire, term):
+        qml.BasisState(self.hf_state, wires=range(qubits))
+        for _ in range(0, self.repetition):
+            for i, term in enumerate(self.singles):
+                qml.SingleExcitation(params[0][i], wires=term)
+            for i, term in enumerate(self.doubles):
+                qml.DoubleExcitation(params[1][i], wires=term)
+        if term=='X':
+            qml.Hadamard(wires=wire)
+        elif term=='Y':
+            qml.S(wires=wire)
+            qml.Hadamard(wires=wire)
+
+        return qml.counts(wires=wire)

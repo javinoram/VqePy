@@ -111,11 +111,22 @@ class spin_hamiltonian(Spin_ansatz, ):
             number_nonlocal_params(self.ansatz_pattern, self.number_qubits, self.repetition)]
         return
     
+    '''
+    Method to execute the minimization algorithms
+    '''
     def ground_state_calculation(self, theta: list):
         xs = sc.optimize.minimize(self.cost_function_VQE, theta, method=self.optimization_method[0],
                                 options=self.optimization_alg_params[0])['x']
         return xs, self.cost_function_VQE(xs)
     
+    def thermalizer_state_calculation(self, theta: list):
+        xs = sc.optimize.minimize(self.cost_function_VQT, theta, method=self.optimization_method[0],
+                                options=self.optimization_alg_params[0])['x']
+        return xs, self.cost_function_VQT(xs)
+
+    '''
+    Cost functions for VQE and VQT
+    '''
     def cost_function_VQE(self, theta: list) -> float:
         ansatz_1 = theta[0 :self.number_params[0]]
         ansatz_2 = theta[self.number_params[0]: ]
@@ -130,6 +141,54 @@ class spin_hamiltonian(Spin_ansatz, ):
                     result += exchange*prob*const_state
         return result
 
-class hubbard_hamiltonian():
-    def __init__(self) -> None:
-        pass
+
+'''
+Linear chain site for hubbard model
+'''
+class hubbard_hamiltonian(Given_ansatz):
+    number_sites: int = 0
+    number_qubits: int = 0
+    number_electrons: int = 0
+
+    def __init__(self, params, params_alg) -> None:
+        self.number_sites = params["sites"]
+        self.number_qubits = 2*self.number_sites
+        self.number_electrons = params['electrons']
+
+        self.repetition = params['repetition']
+        self.hf_state = qml.qchem.hf_state(self.number_electrons, self.number_qubits)
+        self.singles, self.doubles = qml.qchem.excitations(self.number_electrons, self.number_qubits)
+        self.number_params = [len(self.singles)*self.repetition, len(self.doubles)*self.repetition]
+
+        self.dev = qml.device(params_alg['backend'], wires=self.number_qubits)
+        self.node = qml.QNode(self.given_circuit, self.dev, interface="autograd")
+        self.optimization_alg_params = params_alg['optimization_alg_params'],
+        self.optimization_method = params_alg['optimization_method'],
+        return
+    
+    '''
+    Method to execute the minimization algorithms
+    '''
+    def ground_state_calculation(self, theta: list):
+        xs = sc.optimize.minimize(self.cost_function_VQE, theta, method=self.optimization_method[0],
+                                options=self.optimization_alg_params[0])['x']
+        return xs, self.cost_function_VQE(xs)
+    
+
+    '''
+    Method to execute the minimization algorithms
+    '''
+    def cost_function_VQE(self, theta: list) -> float:
+        ansatz_1 = theta[0 :self.number_params[0]]
+        ansatz_2 = theta[self.number_params[0]: ]
+        result= 0.0
+        for i, term in enumerate(self.hamiltonian_index):
+            result_term = self.node( qubits= self.number_qubits, correction=self.correction, params=[ansatz_1, ansatz_2], wire = term)
+            for _, dict_term in enumerate( conts_spin[ str(self.spin) ]["2"] ):
+                if dict_term in result_term:
+                    exchange = self.hamiltonian_object[i][1]
+                    prob = result_term[dict_term]/self.shots
+                    const_state = conts_spin[ str(self.spin) ]["2"][dict_term]
+                    result += exchange*prob*const_state
+        return result
+    
