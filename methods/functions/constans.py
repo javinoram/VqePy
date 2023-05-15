@@ -1,37 +1,3 @@
-import math
-import itertools
-import pennylane as qml
-from pennylane import qchem
-from pennylane import numpy as np
-import scipy.linalg as la
-import scipy as sc
-
-
-def prob_dist(params):
-    return np.vstack([sigmoid(params), 1 - sigmoid(params)]).T
-
-def sigmoid(x):
-    return np.exp(x) / (np.exp(x) + 1)
-
-def calculate_entropy(distribution):
-    total_entropy = 0
-    for d in distribution:
-        total_entropy += -1 * d[0] * np.log(d[0]) + -1 * d[1] * np.log(d[1])
-    return total_entropy
-    
-def number_rotation_params(qubits, reps):
-        return 3*qubits*reps
-
-def number_nonlocal_params(text, qubits, reps):
-    if text=='chain':
-        return int( (qubits-1)*reps )
-    elif text=='ring':
-        return int( qubits*reps )
-    elif text=='all_to_all':
-        return int( (qubits/2)*(qubits-1)*reps )
-    else:
-        return 0
-
 bohr_angs = 0.529177210903
 
 conts_spin = {"0.5": {"1": { '0':1, '1':-1, },
