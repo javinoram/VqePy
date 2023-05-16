@@ -1,4 +1,4 @@
-from methods.variational_quantum_eigensolver import *
+from quantumsim.variational_quantum_eigensolver import *
 from pennylane import numpy as np
 import scipy.linalg as la
 import scipy as sc

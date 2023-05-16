@@ -1,4 +1,4 @@
-from methods.optimizacion_structure import *
+from quantumsim.optimizacion_structure import *
 from pennylane import numpy as np
 import scipy.linalg as la
 import scipy as sc
