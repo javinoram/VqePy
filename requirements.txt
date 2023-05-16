@@ -9,4 +9,3 @@ pennylane-qiskit
 pennylane-cirq
 cmake
 openfermionpyscf
-tencirchem
