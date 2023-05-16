@@ -7,6 +7,10 @@ the fields of interest are the following.
 2. 2D materials
 3. Molecules
 
+This project didnt want to be another quantum library. This one should be see as a high level
+implementation to study systems with a fixed route to be executed, so, the user only need to give 
+a parameter's file and no programming is needed. 
+
 # Libraries
 1. pennylane
 2. numpy
