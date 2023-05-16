@@ -32,4 +32,4 @@ The method considerated to be applied in the different models are:
 4. Use VQE for upper spines
 5. Variational quantum thermalizer
 
-Not all method can be used in some types of hamiltonian.
+Not all method can be used in all types of hamiltonian.
