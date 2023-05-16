@@ -15,7 +15,6 @@ def finite_diff(f, x, delta=0.01):
         return gradient
 
 class optimization_structure(given_ansatz):
-    #hamiltonian_object= None
     symbols = None
     coordinates = None
     mapping= 'jordan_wigner'

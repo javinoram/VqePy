@@ -3,6 +3,14 @@ from methods.functions.constans import *
 from pennylane import qchem
 import math
 
+'''
+Clases que representan implementaciones del metodo variational quantum eigensolver (VQE).
+
+Cada clase representa un tipo concreto de hamiltoniano en el que puede aplicar VQE,
+dentro de cada uno estan los metodos necesarios para poder contruir el paso de optimizacion.
+(hamiltoniano, ansatz y funcion de coste)
+'''
+
 class variational_quantum_eigensolver_electronic(given_ansatz):
     hamiltonian_object= None
     symbols = None
@@ -13,6 +21,16 @@ class variational_quantum_eigensolver_electronic(given_ansatz):
     basis='sto-3g'
     method='dhf'
 
+    '''
+    Iniciador de la clase que construye el hamiltoniano molecular, todas las variables
+    son guardadas en la clase
+    input:
+        symbols: list [string]
+        coordinates: list [float]
+        params: dict
+    return:
+        result: none
+    '''
     def __init__(self, symbols, coordinates, params= None):
         self.symbols = symbols
         self.coordinates = coordinates
@@ -26,6 +44,13 @@ class variational_quantum_eigensolver_electronic(given_ansatz):
             method= self.method)
         return
     
+    '''
+    Funcion de coste: Funcion de coste que utiliza la funcion de valor esperado de qml
+    input:
+        theta: list [float]
+    return:
+        result: float
+    '''
     def cost_function(self, theta):
         params = [theta[:len(self.singles)*self.repetition], theta[len(self.singles)*self.repetition:]]
         result = self.node(theta = params, obs = self.hamiltonian_object)
@@ -36,7 +61,15 @@ class variational_quantum_eigensolver_spin(spin_ansatz):
     hamiltonian_object = None
     hamiltonian_index = []
 
-    def __init__(self, params= None):
+    '''
+    Iniciador de la clase que construye la matriz de indices, todas las variables
+    son guardadas en la clase
+    input:
+        params: dict
+    return:
+        result: none
+    '''
+    def __init__(self, params):
         self.qubits = len(params['list'][0][0])
         self.spin = params['spin']
         self.correction = math.ceil( (int( 2*self.spin+1 ))/2  )
@@ -48,6 +81,14 @@ class variational_quantum_eigensolver_spin(spin_ansatz):
         self.hamiltonian_object = params['list']
         return
     
+
+    '''
+    Funcion de coste: Funcion de coste usando descomposicion de suma de probabilidades
+    input:
+        theta: list [float]
+    return:
+        result: float
+    '''
     def cost_function(self, theta):
         ansatz_1 = theta[0: self.qubits*len(self.rotation_set)*self.repetition]
         ansatz_2 = theta[self.qubits*len(self.rotation_set)*self.repetition: ]
