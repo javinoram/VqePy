@@ -1,11 +1,10 @@
-qiskit
 numpy
 scipy
-pandas
 pennylane
-networkx
 matplotlib
 pennylane-qiskit
+qiskit_ibm_provider
 pennylane-cirq
-cmake
+pennylane-ionq
 openfermionpyscf
+pyyaml

@@ -3,17 +3,6 @@ from quantumsim.functions.constans import *
 from pennylane import qchem
 from pennylane import numpy as np
 
-def finite_diff(f, x, delta=0.01):
-        gradient = []
-
-        for i in range(len(x)):
-            shift = np.zeros_like(x)
-            shift[i] += 0.5 * delta
-            res = (f(x + shift) - f(x - shift)) * delta**-1
-            gradient.append(res)
-
-        return gradient
-
 class optimization_structure(given_ansatz):
     symbols = None
     coordinates = None
@@ -31,7 +20,7 @@ class optimization_structure(given_ansatz):
             symbols= symbols,
             coordinates= coordinates,
             mapping= self.mapping,
-            charge= 1,
+            charge= self.charge,
             mult= self.mult,
             basis= self.basis,
             method= self.method)
@@ -45,7 +34,6 @@ class optimization_structure(given_ansatz):
     
     def H(self, x):
         return qml.qchem.molecular_hamiltonian(self.symbols, x, mult= self.mult, charge=self.charge)[0]
-    
     
     def cost_function(self, theta, x):
         params = [theta[:len(self.singles)*self.repetition], theta[len(self.singles)*self.repetition:]]

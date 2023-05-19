@@ -1,5 +1,5 @@
-from methods.functions.ansatz import *
-from methods.functions.constans import *
+from quantumsim.functions.ansatz import *
+from quantumsim.functions.constans import *
 from pennylane import qchem
 import math
 

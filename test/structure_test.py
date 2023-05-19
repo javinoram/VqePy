@@ -6,7 +6,7 @@ import sys
 
 print(sys.argv)
 
-symbols = ["H", "H", "H"]
+symbols = ["H", "H", "H",]
 coordinates = np.array([0.028, 0.054, 0.0, 0.986, 1.610, 0.0, 1.855, 0.002, 0.0], requires_grad=True)
 params_ansatz = {'repetition': 1,'electrons': 2,}
 params_alg = {'backend': "default.qubit", 'interface':"autograd"}

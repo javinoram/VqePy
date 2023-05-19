@@ -1,0 +1,21 @@
+method_class : VQE
+simulation_object: Electronic
+
+output_dir: results
+
+hamiltonian_params:
+    file: h2.xyz
+    molecule:
+
+ansatz_params:
+    repetitions: 3
+    electrons: 2
+    backend: default.qubit
+    interface: autograd
+
+minimizate_method: Gradient
+minimizate_method_params:
+    itermax: 1000
+    step_theta: 0.3
+    step_x: 0.8
+    tol: 0.000001

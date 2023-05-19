@@ -1,3 +1,14 @@
+from pennylane import numpy as np
+
+def finite_diff(f, x, delta=0.01):
+        gradient = []
+        for i in range(len(x)):
+            shift = np.zeros_like(x)
+            shift[i] += 0.5 * delta
+            res = (f(x + shift) - f(x - shift)) * delta**-1
+            gradient.append(res)
+        return gradient
+
 bohr_angs = 0.529177210903
 
 conts_spin = {"0.5": {"1": { '0':1, '1':-1, },

@@ -17,7 +17,7 @@ class given_ansatz():
         return
 
     def set_hiperparams_circuit(self, params) -> None:
-        self.repetition = params['repetition']
+        self.repetition = params['repetitions']
         self.hf_state = qml.qchem.hf_state(params['electrons'], self.qubits)
         self.singles, self.doubles = qml.qchem.excitations(params['electrons'], self.qubits)
         return

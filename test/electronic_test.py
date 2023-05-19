@@ -3,12 +3,14 @@ from pennylane import numpy as np
 import scipy.linalg as la
 import scipy as sc
 import sys
+import time
 
 print(sys.argv)
 
-symbols = ["H", "H"]
-coordinates = np.array([0.0, 0.0, -0.6614, 0.0, 0.0, 0.6614], requires_grad=True)
-params_ansatz = {'repetition': 1,'electrons': 2,}
+symbols = ["H", "H", "H", "H", "H", "H", "H", "H",]
+coordinates = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0,
+        0.0, -1.0, 0.0, 1.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 1.0,], requires_grad=True)
+params_ansatz = {'repetition': 1,'electrons': 8,}
 params_alg = {'backend': "default.qubit", 'interface':"autograd"}
 
 
@@ -27,7 +29,10 @@ print(result)
 
 print(object_vqe.draw_circuit)
 
+seconds = time.time()
 xs = sc.optimize.minimize(object_vqe.cost_function, theta, method="COBYLA",)['x']
 result = object_vqe.cost_function(xs)
+seconds2 = time.time()
 print(result)
 print(xs)
+print(seconds2- seconds)
