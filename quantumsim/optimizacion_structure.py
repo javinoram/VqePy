@@ -16,6 +16,30 @@ class optimization_structure(given_ansatz):
         self.symbols = symbols
         self.coordinates = coordinates
 
+        if params['mapping']:
+            if params['mapping'] in ("jordan_wigner", "bravyi_kitaev"):
+                self.mapping = params['mapping']
+            else:
+                raise Exception("Mapping no valido, considere jordan_wigner o bravyi_kitaev")
+            
+        elif params['charge']:
+            self.charge = params['charge']
+
+        elif params['mult']:
+            self.mult = params['mult']
+
+        elif params['basis']:
+            if params['basis'] in ("sto-3g", "6-31g", "6-311g", "cc-pvdz"):
+                self.basis = params['basis']
+            else:
+                raise Exception("Base no valida, considere sto-3g, 6-31g, 6-311g, cc-pvdz")
+        
+        elif params['method']:
+            if params['method'] in ("pyscf", "dhf"):
+                self.method = params['method']
+            else:
+                raise Exception("Metodo no valido, considere dhf o pyscf")
+
         _, self.qubits = qchem.molecular_hamiltonian(
             symbols= symbols,
             coordinates= coordinates,
@@ -28,8 +52,16 @@ class optimization_structure(given_ansatz):
 
     def grad_x(self, theta, x):
         params = [theta[:len(self.singles)*self.repetition], theta[len(self.singles)*self.repetition:]]
-        grad_h = finite_diff(self.H, x)
-        grad = [self.node( params, obs ) for obs in grad_h]
+        
+        grad = []
+        delta = 0.01
+        for i in range(len(x)):
+            shift = np.zeros_like(x)
+            shift[i] += 0.5 * delta
+            res = (self.H(x + shift) - self.H(x - shift)) * delta**-1
+            grad.append(self.node( params, res ))
+        #grad_h = finite_diff(self.H, x)
+        #grad = [self.node( params, obs ) for obs in grad_h]
         return np.array(grad)
     
     def H(self, x):

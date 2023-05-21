@@ -1,0 +1,19 @@
+obs_class : VQE
+simulation_object: Electronic
+
+hamiltonian_params:
+    file: h2.xyz
+    pauli_string: [[ZZI, 0.1]]
+    spin: 0.5
+
+ansatz_params:
+    repetitions: 3
+    electrons: 2
+    backend: default.qubit
+    interface: autograd
+    shots: 1000
+
+obs_params:
+    lim_inf: 0.0
+    lim_sup: 10.0
+    
