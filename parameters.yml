@@ -1,4 +1,4 @@
-method_class : VQE
+method_class : VQT
 simulation_object: Electronic
 
 output_dir: results
@@ -6,16 +6,20 @@ output_dir: results
 hamiltonian_params:
     file: h2.xyz
     molecule:
+    pauli_string: [[ZZI, 0.1]]
+    spin: 0.5
 
 ansatz_params:
     repetitions: 3
     electrons: 2
     backend: default.qubit
     interface: autograd
+    shots: 1000
 
 minimizate_method: Gradient
 minimizate_method_params:
-    itermax: 1000
-    step_theta: 0.3
-    step_x: 0.8
+    type: "COBYLA"
+    maxiter: 1000
     tol: 0.000001
+    step_theta: 0.4
+    step_x: 0.8

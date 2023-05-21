@@ -1,4 +1,5 @@
 from pennylane import numpy as np
+import pandas as pd
 
 def finite_diff(f, x, delta=0.01):
         gradient = []
@@ -8,6 +9,20 @@ def finite_diff(f, x, delta=0.01):
             res = (f(x + shift) - f(x - shift)) * delta**-1
             gradient.append(res)
         return gradient
+
+def calculate_entropy(distribution):
+    total_entropy = 0
+    for d in distribution:
+        total_entropy += -1 * d[0] * np.log(d[0]) + -1 * d[1] * np.log(d[1])
+    return total_entropy
+
+def sigmoid(x):
+    return np.exp(x) / (np.exp(x) + 1)
+
+def prob_dist(params):
+    return np.vstack([sigmoid(params), 1 - sigmoid(params)]).T
+
+
 
 bohr_angs = 0.529177210903
 

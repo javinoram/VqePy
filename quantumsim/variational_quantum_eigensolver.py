@@ -70,15 +70,19 @@ class variational_quantum_eigensolver_spin(spin_ansatz):
         result: none
     '''
     def __init__(self, params):
-        self.qubits = len(params['list'][0][0])
+        self.qubits = len(params['pauli_string'][0][0])
         self.spin = params['spin']
         self.correction = math.ceil( (int( 2*self.spin+1 ))/2  )
-        for term in params['list']:
+        for term in params['pauli_string']:
             aux = []
             for i, string in enumerate(term[0]):
                 if string != 'I': aux.append(i)
+            
+            if len(aux) != 2:
+                raise Exception("Terminos del hamiltoniano tienen mas de 2 interacciones")
+            
             self.hamiltonian_index.append(aux)
-        self.hamiltonian_object = params['list']
+        self.hamiltonian_object = params['pauli_string']
         return
     
 
@@ -90,11 +94,10 @@ class variational_quantum_eigensolver_spin(spin_ansatz):
         result: float
     '''
     def cost_function(self, theta):
-        ansatz_1 = theta[0: self.qubits*len(self.rotation_set)*self.repetition]
-        ansatz_2 = theta[self.qubits*len(self.rotation_set)*self.repetition: ]
+        ansatz = theta
         result= 0.0
         for i, term in enumerate(self.hamiltonian_index):
-            result_term = self.node( theta=[ansatz_1, ansatz_2], obs= term)
+            result_term = self.node( theta=ansatz, obs= term)
             for _, dict_term in enumerate( conts_spin[ str(self.spin) ]["2"] ):
                 if dict_term in result_term:
                     exchange = self.hamiltonian_object[i][1]
