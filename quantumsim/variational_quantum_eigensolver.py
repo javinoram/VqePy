@@ -97,12 +97,8 @@ class variational_quantum_eigensolver_spin(spin_ansatz):
         ansatz = theta
         result= 0.0
         for i, term in enumerate(self.hamiltonian_index):
-            result_term = self.node( theta=ansatz, obs= term)
-            for _, dict_term in enumerate( conts_spin[ str(self.spin) ]["2"] ):
-                if dict_term in result_term:
-                    exchange = self.hamiltonian_object[i][1]
-                    prob = result_term[dict_term]/self.shots
-                    const_state = conts_spin[ str(self.spin) ]["2"][dict_term]
-                    result += exchange*prob*const_state
+            result_term = self.node( theta=ansatz, obs= term, pauli= self.hamiltonian_object[i][0])
+            exchange = self.hamiltonian_object[i][1]
+            result += exchange*(result_term[0] - result_term[1] - result_term[2] +result_term[3])
         return result
     

@@ -56,7 +56,7 @@ class spin_ansatz():
     qubits = 0
     correction = 1
     repetition = 0
-    shots = 1e3
+    shots = 1000
 
     def set_device(self, params) -> None:
         self.backend = params['backend']
@@ -66,7 +66,7 @@ class spin_ansatz():
     def set_hiperparams_circuit(self, params) -> None:
         self.repetition = params['repetitions']
         self.shots = params['shots']
-        self.device= qml.device(self.backend, wires=self.qubits*self.correction, shots = self.shots)
+        self.device= qml.device(self.backend, wires=self.qubits*self.correction, shots = int(self.shots))
         return
     
     def set_node(self, params) -> None:
@@ -116,7 +116,7 @@ class spin_ansatz():
                 for j in range(self.correction):
                     qml.S(wires=[self.correction*i+j])
                     qml.Hadamard(wires=[self.correction*i+j])
-        return qml.counts(wires=aux)
+        return qml.probs(wires=aux)
     
 
     def draw_circuit():

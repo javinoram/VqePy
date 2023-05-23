@@ -49,7 +49,7 @@ return:
 
 def scipy_method_VQE(cost_function, theta, params):
     energy = []
-    theta_evol = [theta]
+    theta_evol = []
 
     def cost_aux(x): 
         result = cost_function(x)
@@ -126,7 +126,7 @@ def gradiend_method_OS(cost_function, theta, x, params, grad):
 
 
 '''
-Funcion: gradiend_method_VQE
+Funcion: gradiend_method_VQT
 input:
     cost_function: funcion de coste
     theta: vector de parametros de rotacion
@@ -164,7 +164,7 @@ def gradiend_method_VQT(cost_function, theta, dist, beta, params):
 
 
 '''
-Funcion: gradiend_method_VQE
+Funcion: gradiend_method_VQT
 input:
     cost_function: funcion de coste
     theta: vector de parametros de rotacion

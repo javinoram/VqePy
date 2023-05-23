@@ -1,5 +1,5 @@
 method_class : VQT
-simulation_object: Electronic
+simulation_object: Spin
 
 output_dir: results
 
@@ -14,9 +14,9 @@ ansatz_params:
     electrons: 2
     backend: default.qubit
     interface: autograd
-    shots: 1000
+    shots: 1000.0
 
-minimizate_method: Gradient
+minimizate_method: Scipy
 minimizate_method_params:
     type: "COBYLA"
     maxiter: 1000
