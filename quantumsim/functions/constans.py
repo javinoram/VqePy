@@ -1,6 +1,17 @@
 from pennylane import numpy as np
 import pandas as pd
 
+def parity(integer):
+    binary = format(integer, 'b')
+    aux = 0
+    for s in binary:
+        if s=='1':
+            aux +=1
+    if aux%2 == 0:
+        return 1
+    else:
+        return -1
+
 def finite_diff(f, x, delta=0.01):
         gradient = []
         for i in range(len(x)):

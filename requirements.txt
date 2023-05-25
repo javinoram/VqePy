@@ -4,7 +4,6 @@ pennylane
 matplotlib
 pennylane-qiskit
 qiskit_ibm_provider
-pennylane-cirq
 pennylane-ionq
 openfermionpyscf
 pyyaml
