@@ -1,11 +1,13 @@
 method_class : VQT
 simulation_object: Spin
 
-output_dir: results
-
 hamiltonian_params:
     file: h2.xyz
-    molecule:
+    mapping: bravyi_kitaev
+    charge:
+    mult:
+    basis:
+    method:
     pauli_string: [[ZZI, 0.1]]
     spin: 0.5
 

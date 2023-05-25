@@ -34,6 +34,30 @@ class variational_quantum_eigensolver_electronic(given_ansatz):
     def __init__(self, symbols, coordinates, params= None):
         self.symbols = symbols
         self.coordinates = coordinates
+        if params['mapping']:
+            if params['mapping'] in ("jordan_wigner", "bravyi_kitaev"):
+                self.mapping = params['mapping']
+            else:
+                raise Exception("Mapping no valido, considere jordan_wigner o bravyi_kitaev")
+            
+        elif params['charge']:
+            self.charge = params['charge']
+
+        elif params['mult']:
+            self.mult = params['mult']
+
+        elif params['basis']:
+            if params['basis'] in ("sto-3g", "6-31g", "6-311g", "cc-pvdz"):
+                self.basis = params['basis']
+            else:
+                raise Exception("Base no valida, considere sto-3g, 6-31g, 6-311g, cc-pvdz")
+        
+        elif params['method']:
+            if params['method'] in ("pyscf", "dhf"):
+                self.method = params['method']
+            else:
+                raise Exception("Metodo no valido, considere dhf o pyscf")
+
         self.hamiltonian_object, self.qubits = qchem.molecular_hamiltonian(
             symbols= symbols,
             coordinates= coordinates,

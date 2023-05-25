@@ -167,13 +167,20 @@ class spin05_ansatz():
                     qml.CNOT(wires=[i, (i+1)])
         return
 
-    def circuit(self, theta, obs, state):
+    def circuit(self, theta, obs, pauli, state):
         qml.BasisState(state, wires=range(self.qubits))
         rotation_number = self.qubits
         for i in range(0, self.repetition):
             self.single_rotation(theta[i*rotation_number:(i+1)*rotation_number])
             self.non_local_gates()
-        return qml.expval(obs.hamiltonian(wire_order=range(self.qubits)))
+        
+        if 'X' in pauli:
+            qml.Hadamard(wires=obs)
+        if 'Y' in pauli:
+            qml.S(wires=obs)
+            qml.Hadamard(wires=obs)
+        return qml.probs(wires=obs)
+        #return qml.expval(obs.hamiltonian(wire_order=range(self.qubits)))
     
 
     def draw_circuit():

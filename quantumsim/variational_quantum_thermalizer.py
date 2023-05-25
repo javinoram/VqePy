@@ -6,6 +6,7 @@ import itertools
 
 class variational_quantum_thermalizer_spin(spin05_ansatz):
     hamiltonian_object = None
+    hamiltonian_index = []
 
     '''
     Iniciador de la clase que construye la matriz de indices, todas las variables
@@ -17,15 +18,16 @@ class variational_quantum_thermalizer_spin(spin05_ansatz):
     '''
     def __init__(self, params):
         self.qubits = len(params['pauli_string'][0][0])
-
-        dict_pauli = {}
         for term in params['pauli_string']:
-            pauli_word = {}
+            aux = []
             for i, string in enumerate(term[0]):
-                pauli_word[i] = string
-            dict_pauli[qml.pauli.PauliWord(pauli_word)] = term[1]
-
-        self.hamiltonian_object = qml.pauli.PauliSentence(dict_pauli)
+                if string != 'I': aux.append(i)
+            
+            if len(aux) != 2:
+                raise Exception("Terminos del hamiltoniano tienen mas de 2 interacciones")
+            
+            self.hamiltonian_index.append(aux)
+        self.hamiltonian_object = params['pauli_string']
         return
     
 
@@ -47,9 +49,15 @@ class variational_quantum_thermalizer_spin(spin05_ansatz):
         
         result = 0.0
         for state in s:
-            result += self.node( theta=ansatz, obs= self.hamiltonian_object, state= state)
+            result_aux = 0
+            for i, term in enumerate(self.hamiltonian_index):
+                result_term = self.node( theta=ansatz, obs= term, pauli= self.hamiltonian_object[i][0], state= state)
+                exchange = self.hamiltonian_object[i][1]
+                result_aux += exchange*(result_term[0] - result_term[1] - result_term[2] +result_term[3])
+            #result += self.node( theta=ansatz, obs= self.hamiltonian_object, state= state)
             for j in range(0, len(state)):
-                result = result * distribution[j][state[j]]
+                result_aux = result_aux * distribution[j][state[j]]
+            result += result_aux
         entropy = calculate_entropy(distribution)
         final_cost = beta * result - entropy
         return final_cost

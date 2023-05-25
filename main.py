@@ -37,7 +37,7 @@ if params["method_class"] == "VQE":
         except:
             raise Exception("Error en el archivo .xyz")
         
-        object_vqe = variational_quantum_eigensolver_electronic(symbols, coordinates)
+        object_vqe = variational_quantum_eigensolver_electronic(symbols, coordinates, params["hamiltonian_params"])
         object_vqe.set_device(params["ansatz_params"])
         object_vqe.set_hiperparams_circuit(params["ansatz_params"])
         object_vqe.set_node(params["ansatz_params"])
@@ -69,14 +69,23 @@ if params["method_class"] == "VQE":
     else:
         raise Exception("Metodo de minimizacion ingresado no esta considerado")
     
-    #Almacenamiento de resultados usando pandas
-    #Ver si agregar mas informacion
+    #Guarda toda la evolucion de los parametros en un .csv
+    #Guarda los parametros optimos en otro archivo
+    #
     data={'step':[i for i in range(len(energy))], 'energy': energy}
     theta_evol = np.array(theta_evol).T
     for i in range(len(theta_evol)):
         data["p"+str(i)] = theta_evol[i]
     Result = pd.DataFrame( data )
     Result.to_csv("VQE"+params["simulation_object"]+".csv")
+    
+    data = {}
+    for i in range(len(theta_evol)):
+        data["p"+str(i)] = [theta_evol[i][-1]]
+    Result = pd.DataFrame( data )
+    Result.to_csv("OptimumVQE"+params["simulation_object"]+".csv")
+
+
 
 
 
@@ -122,6 +131,17 @@ elif params["method_class"] == "SO":
     Result = pd.DataFrame( data )
     Result.to_csv("SO"+params["simulation_object"]+".csv")
 
+    data = {}
+    for i in range(len(theta_evol)):
+        if i < len(coordinates):
+            data["x"+str(i)] = [theta_evol[i][-1]]
+        else:
+            data["p"+str(i-len(coordinates))] = [theta_evol[i][-1]]
+    Result = pd.DataFrame( data )
+    Result.to_csv("OptimumSO"+params["simulation_object"]+".csv")
+
+
+
 
     '''
     Variational Quantum Thermalizer
@@ -158,3 +178,12 @@ elif params["method_class"] == "VQT":
             data["p"+str(i)] = theta_evol[i]
     Result = pd.DataFrame( data )
     Result.to_csv("VQT"+params["simulation_object"]+".csv")
+
+    data = {}
+    for i in range(len(theta_evol)):
+        if i<object_vqt.qubits:
+            data["d"+str(i)] = [theta_evol[i][-1]]
+        else:
+            data["p"+str(i)] = [theta_evol[i][-1]]
+    Result = pd.DataFrame( data )
+    Result.to_csv("OptimumVQT"+params["simulation_object"]+".csv")
