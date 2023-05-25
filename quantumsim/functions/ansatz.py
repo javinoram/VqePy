@@ -4,6 +4,10 @@ class given_ansatz():
     def circuit(self, theta, obs):
         pass
 
+    base = ""
+    backend = ""
+    token = ""
+
     device= qml.device("default.qubit", wires=0)
     node = qml.QNode(circuit, device, interface="autograd")
     qubits = 0
@@ -13,7 +17,34 @@ class given_ansatz():
     hf_state = None
 
     def set_device(self, params) -> None:
-        self.device= qml.device(params['backend'], wires=self.qubits)
+        self.base = params['base']
+        self.shots = params['shots']
+
+        ##Maquinas reales
+        if self.base == 'qiskit.ibmq':
+            if params['backend']:
+                self.backend = params['backend']
+            else:
+                raise Exception("Backend no encontrado")
+            if params['token']:
+                self.token = params['token']
+                self.device= qml.device(self.base, backend=self.backend, 
+                    wires=self.qubits, shots = int(self.shots), 
+                    ibmqx_token= self.token)
+            else:
+                raise Exception("Token de acceso no encontrado")
+        ##Simuladores de qiskit
+        elif self.base == "qiskit.aer":
+            if params['backend']:
+                self.backend = params['backend']
+            else:
+                raise Exception("Backend no encontrado")
+            
+            self.device= qml.device(self.base, backend=self.backend, 
+                    wires=self.qubits*self, shots = int(self.shots))
+        ##Simuladores de pennylane
+        else:
+            self.device= qml.device(self.base, wires=self.qubits, shots = int(self.shots))
         return
 
     def set_hiperparams_circuit(self, params) -> None:
@@ -47,11 +78,12 @@ class spin_ansatz():
     def circuit(self, theta, obs, pauli):
         pass
 
-    backend = "default.qubit"
+    base = ""
+    backend = ""
+    token = ""
+
     device= qml.device("default.qubit", wires=0)
     node = qml.QNode(circuit, device, interface="autograd")
-    rotation_set = ["Y"]
-    nonlocal_set = ["CX"]
     pattern = "chain"
     qubits = 0
     correction = 1
@@ -59,14 +91,33 @@ class spin_ansatz():
     shots = 1000
 
     def set_device(self, params) -> None:
-        self.backend = params['backend']
-        self.device= qml.device(params['backend'], wires=self.qubits)
-        return
-
-    def set_hiperparams_circuit(self, params) -> None:
-        self.repetition = params['repetitions']
+        self.base = params['base']
         self.shots = params['shots']
-        self.device= qml.device(self.backend, wires=self.qubits*self.correction, shots = int(self.shots))
+
+        ##Maquinas reales
+        if self.base == 'qiskit.ibmq':
+            if params['backend']:
+                self.backend = params['backend']
+            else:
+                raise Exception("Backend no encontrado")
+            if params['token']:
+                self.token = params['token']
+                self.device= qml.device(self.base, backend=self.backend, 
+                    wires=self.qubits*self.correction, shots = int(self.shots), 
+                    ibmqx_token= self.token)
+            else:
+                raise Exception("Token de acceso no encontrado")
+        ##Simuladores de qiskit
+        elif self.base == "qiskit.aer":
+            if params['backend']:
+                self.backend = params['backend']
+            else:
+                raise Exception("Backend no encontrado")
+            self.device= qml.device(self.base, backend=self.backend, 
+                    wires=self.qubits*self.correction, shots = int(self.shots))
+        ##Simuladores de pennylane
+        else:
+            self.device= qml.device(self.base, wires=self.qubits*self.correction, shots = int(self.shots))
         return
     
     def set_node(self, params) -> None:
@@ -97,7 +148,7 @@ class spin_ansatz():
 
     def circuit(self, theta, obs, pauli):
         qml.BasisState([0 for _ in range(self.qubits*self.correction)], wires=range(self.qubits*self.correction))
-        rotation_number = self.qubits*len(self.rotation_set)
+        rotation_number = self.qubits
         for i in range(0, self.repetition):
             self.single_rotation(theta[i*rotation_number:(i+1)*rotation_number])
             self.non_local_gates()
@@ -127,7 +178,10 @@ class spin05_ansatz():
     def circuit(self, theta, obs, state):
         pass
 
-    backend = "default.qubit"
+    base = ""
+    backend = ""
+    token = ""
+
     device= qml.device("default.qubit", wires=0)
     node = qml.QNode(circuit, device, interface="autograd")
     pattern = "chain"
@@ -135,14 +189,27 @@ class spin05_ansatz():
     repetition = 0
 
     def set_device(self, params) -> None:
-        self.backend = params['backend']
-        self.device= qml.device(params['backend'], wires=self.qubits)
-        return
-
-    def set_hiperparams_circuit(self, params) -> None:
-        self.repetition = params['repetitions']
+        self.base = params['base']
         self.shots = params['shots']
-        self.device= qml.device(self.backend, wires=self.qubits)
+
+        ##Maquinas reales
+        if self.base == 'qiskit.ibmq':
+            self.backend = params['backend']
+            if params['token']:
+                self.token = params['token']
+                self.device= qml.device(self.base, backend=self.backend, 
+                    wires=self.qubits, shots = int(self.shots), 
+                    ibmqx_token= self.token)
+            else:
+                raise Exception("Token de acceso no encontrado")
+        ##Simuladores de qiskit
+        elif self.base == "qiskit.aer":
+            self.backend = params['backend']
+            self.device= qml.device(self.base, backend=self.backend, 
+                    wires=self.qubits*self, shots = int(self.shots))
+        ##Simuladores de pennylane
+        else:
+            self.device= qml.device(self.base, wires=self.qubits, shots = int(self.shots))
         return
     
     def set_node(self, params) -> None:

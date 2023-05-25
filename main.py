@@ -49,7 +49,6 @@ if params["method_class"] == "VQE":
 
         object_vqe = variational_quantum_eigensolver_spin(params["hamiltonian_params"])
         object_vqe.set_device(params["ansatz_params"])
-        object_vqe.set_hiperparams_circuit(params["ansatz_params"])
         object_vqe.set_node(params["ansatz_params"])
 
         rep = params["ansatz_params"]["repetitions"]
@@ -153,7 +152,6 @@ elif params["method_class"] == "VQT":
     
     object_vqt = variational_quantum_thermalizer_spin(params["hamiltonian_params"])
     object_vqt.set_device(params["ansatz_params"])
-    object_vqt.set_hiperparams_circuit(params["ansatz_params"])
     object_vqt.set_node(params["ansatz_params"])
 
     rep = params["ansatz_params"]["repetitions"]

@@ -1,4 +1,4 @@
-method_class : VQT
+method_class : VQE
 simulation_object: Spin
 
 hamiltonian_params:
@@ -14,9 +14,11 @@ hamiltonian_params:
 ansatz_params:
     repetitions: 3
     electrons: 2
-    backend: default.qubit
+    base: lightning.qubit
+    backend: 
     interface: autograd
     shots: 1000.0
+    token: 
 
 minimizate_method: Scipy
 minimizate_method_params:
