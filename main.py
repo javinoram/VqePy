@@ -84,10 +84,6 @@ if params["method_class"] == "VQE":
     Result = pd.DataFrame( data )
     Result.to_csv("OptimumVQE"+params["simulation_object"]+".csv")
 
-
-
-
-
     '''
     Optimizacion de estructura
         Metodo solo para hamiltonianos electronicos
@@ -101,7 +97,6 @@ elif params["method_class"] == "SO":
     except:
         raise Exception("Error en el archivo .xyz")
 
-    #ADD SOME EXCEPTIONS FOR THE CONSTRUCTION
     object_struc = optimization_structure(symbols, coordinates)
     object_struc.set_device(params["ansatz_params"])
     object_struc.set_hiperparams_circuit(params["ansatz_params"])
@@ -139,9 +134,6 @@ elif params["method_class"] == "SO":
     Result = pd.DataFrame( data )
     Result.to_csv("OptimumSO"+params["simulation_object"]+".csv")
 
-
-
-
     '''
     Variational Quantum Thermalizer
         Metodo para hamiltonianos de espines de espin 0.5
@@ -159,7 +151,12 @@ elif params["method_class"] == "VQT":
 
     theta = np.array( [np.random.randint(314)/100.0  for _ in range(number)] )
     dist = np.array( [np.random.randint(100)/100.0  for _ in range(object_vqt.qubits)] )
-    beta = 2
+
+    if params["minimizate_method_params"]['temperature'] and params["minimizate_method_params"]['temperature']>0:
+        beta = 1.0/params["minimizate_method_params"]['temperature']
+    else: 
+        raise Exception("Temperatura no valida")
+    
     if params["minimizate_method"] == "Gradient":
         energy, theta_evol, theta = gradiend_method_VQT(object_vqt.cost_function, theta, dist, beta, params["minimizate_method_params"])
     elif params["minimizate_method"] == "Scipy":

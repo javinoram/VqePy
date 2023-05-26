@@ -17,7 +17,6 @@ a parameter's file and no programming is needed.
 3. scipy
 4. matplotlib
 5. pennylane-qiskit
-6. pennylane-cirq
 
 # Requirements
 It's recommended create a virtual enviroment and install all the libraries indicated in the requiremets.txt. 

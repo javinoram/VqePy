@@ -3,18 +3,18 @@ simulation_object: Spin
 
 hamiltonian_params:
     file: h2.xyz
-    mapping: bravyi_kitaev
+    mapping: jordan_wigner
     charge:
     mult:
     basis:
     method:
     pauli_string: [[ZZI, 0.1]]
-    spin: 0.5
+    spin: 1
 
 ansatz_params:
     repetitions: 3
     electrons: 2
-    base: lightning.qubit
+    base: default.qubit
     backend: 
     interface: autograd
     shots: 1000.0
@@ -23,6 +23,7 @@ ansatz_params:
 minimizate_method: Scipy
 minimizate_method_params:
     type: "COBYLA"
+    temperature: 11
     maxiter: 1000
     tol: 0.000001
     step_theta: 0.4

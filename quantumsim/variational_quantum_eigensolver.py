@@ -66,6 +66,7 @@ class variational_quantum_eigensolver_electronic(given_ansatz):
             mult= self.mult,
             basis= self.basis,
             method= self.method)
+        self.hamiltonian_object = self.hamiltonian_object
         return
     
     '''
@@ -79,7 +80,7 @@ class variational_quantum_eigensolver_electronic(given_ansatz):
         params = [theta[:len(self.singles)*self.repetition], theta[len(self.singles)*self.repetition:]]
         result = self.node(theta = params, obs = self.hamiltonian_object)
         return result
-    
+
 
 class variational_quantum_eigensolver_spin(spin_ansatz):
     hamiltonian_object = None
@@ -123,6 +124,8 @@ class variational_quantum_eigensolver_spin(spin_ansatz):
         for i, term in enumerate(self.hamiltonian_index):
             result_term = self.node( theta=ansatz, obs= term, pauli= self.hamiltonian_object[i][0])
             exchange = self.hamiltonian_object[i][1]
-            result += exchange*(result_term[0] - result_term[1] - result_term[2] +result_term[3])
+            for s in conts_spin[str(self.spin)]["2"]:
+            #for i in range(len(result_term)):
+                index = int(s, 2)
+                result += exchange*result_term[index]#*parity(i)
         return result
-    

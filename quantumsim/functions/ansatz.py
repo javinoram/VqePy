@@ -66,12 +66,6 @@ class given_ansatz():
             for i, term in enumerate(self.doubles):
                 qml.DoubleExcitation(theta[1][i], wires=term)
         return qml.expval(obs)
-
-    def draw_circuit(self):
-        number = (len(self.singles)+len(self.doubles))*self.repetition
-        auxtheta = [i for i in range(number)]
-        auxtheta = [auxtheta[:len(self.singles)*self.repetition], auxtheta[len(self.singles)*self.repetition:]]
-        return qml.draw(self.circuit)(auxtheta)
     
 
 class spin_ansatz():
@@ -169,9 +163,6 @@ class spin_ansatz():
                     qml.Hadamard(wires=[self.correction*i+j])
         return qml.probs(wires=aux)
     
-
-    def draw_circuit():
-        return
     
 
 class spin05_ansatz():
@@ -247,8 +238,3 @@ class spin05_ansatz():
             qml.S(wires=obs)
             qml.Hadamard(wires=obs)
         return qml.probs(wires=obs)
-        #return qml.expval(obs.hamiltonian(wire_order=range(self.qubits)))
-    
-
-    def draw_circuit():
-        return
