@@ -43,7 +43,8 @@ if params["method_class"] == "VQE":
         object_vqe.set_node(params["ansatz_params"])
 
         rep = params["ansatz_params"]["repetitions"]
-        number = (len(object_vqe.singles) + len(object_vqe.doubles))*rep               
+        number = 2*rep
+        theta = np.array( [0.2089  for _ in range(number)], requires_grad=True)             
         
     elif params["simulation_object"] == "Spin":
 
@@ -53,14 +54,10 @@ if params["method_class"] == "VQE":
 
         rep = params["ansatz_params"]["repetitions"]
         number = (object_vqe.qubits)*rep
-
-    #POR IMPLEMENTAR
-    elif params["simulation_object"] == "Hubbard":
-        pass
+        theta = np.array( [np.random.randint(314)/100.0  for _ in range(number)], requires_grad=True)
     else:
         raise Exception("Error en el tipo de Hamiltoniano")
 
-    theta = np.array( [np.random.randint(314)/100.0  for _ in range(number)] )
     if params["minimizate_method"] == "Gradient":
         energy, theta_evol, theta = gradiend_method_VQE(object_vqe.cost_function, theta, params["minimizate_method_params"])
     elif params["minimizate_method"] == "Scipy":
@@ -97,7 +94,7 @@ elif params["method_class"] == "SO":
     except:
         raise Exception("Error en el archivo .xyz")
 
-    object_struc = optimization_structure(symbols, coordinates)
+    object_struc = optimization_structure(symbols, coordinates, params['hamiltonian_params'])
     object_struc.set_device(params["ansatz_params"])
     object_struc.set_hiperparams_circuit(params["ansatz_params"])
     object_struc.set_node(params["ansatz_params"])
@@ -182,3 +179,6 @@ elif params["method_class"] == "VQT":
             data["p"+str(i)] = [theta_evol[i][-1]]
     Result = pd.DataFrame( data )
     Result.to_csv("OptimumVQT"+params["simulation_object"]+".csv")
+
+else:
+    raise Exception("Clase del metodo no valido")

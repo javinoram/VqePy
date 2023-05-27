@@ -54,7 +54,6 @@ class variational_quantum_thermalizer_spin(spin05_ansatz):
                 result_term = self.node( theta=ansatz, obs= term, pauli= self.hamiltonian_object[i][0], state= state)
                 exchange = self.hamiltonian_object[i][1]
                 result_aux += exchange*(result_term[0] - result_term[1] - result_term[2] +result_term[3])
-            #result += self.node( theta=ansatz, obs= self.hamiltonian_object, state= state)
             for j in range(0, len(state)):
                 result_aux = result_aux * distribution[j][state[j]]
             result += result_aux
