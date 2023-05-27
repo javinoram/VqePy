@@ -28,6 +28,7 @@ def gradiend_method_VQE(cost_function, theta, params):
         energy.append(cost_function(theta))
         theta_evol.append(theta)
         prev_energy = energy[len(energy)-2]
+        print(prev_energy)
 
         conv = np.abs(energy[-1] - prev_energy)
         if conv <= params["tol"]:
