@@ -44,7 +44,7 @@ if params["method_class"] == "VQE":
 
         rep = params["ansatz_params"]["repetitions"]
         number = 2*rep
-        theta = np.array( [0.2089  for _ in range(number)], requires_grad=True)             
+        theta = np.array( [0.0  for _ in range(number)], requires_grad=True)             
         
     elif params["simulation_object"] == "Spin":
 
@@ -130,55 +130,6 @@ elif params["method_class"] == "SO":
             data["p"+str(i-len(coordinates))] = [theta_evol[i][-1]]
     Result = pd.DataFrame( data )
     Result.to_csv("OptimumSO"+params["simulation_object"]+".csv")
-
-    '''
-    Variational Quantum Thermalizer
-        Metodo para hamiltonianos de espines de espin 0.5
-    '''
-elif params["method_class"] == "VQT":
-    if params["simulation_object"] != "Spin" and params["hamiltonian_params"]["spin"] !=0.5:
-        raise Exception("Solo hamiltonianos de espin 0.5 permitidos")
-    
-    object_vqt = variational_quantum_thermalizer_spin(params["hamiltonian_params"])
-    object_vqt.set_device(params["ansatz_params"])
-    object_vqt.set_node(params["ansatz_params"])
-
-    rep = params["ansatz_params"]["repetitions"]
-    number = (object_vqt.qubits)*rep
-
-    theta = np.array( [np.random.randint(314)/100.0  for _ in range(number)] )
-    dist = np.array( [np.random.randint(100)/100.0  for _ in range(object_vqt.qubits)] )
-
-    if params["minimizate_method_params"]['temperature'] and params["minimizate_method_params"]['temperature']>0:
-        beta = 1.0/params["minimizate_method_params"]['temperature']
-    else: 
-        raise Exception("Temperatura no valida")
-    
-    if params["minimizate_method"] == "Gradient":
-        energy, theta_evol, theta = gradiend_method_VQT(object_vqt.cost_function, theta, dist, beta, params["minimizate_method_params"])
-    elif params["minimizate_method"] == "Scipy":
-        energy, theta_evol, theta = scipy_method_VQT(object_vqt.cost_function, theta, dist, beta, params["minimizate_method_params"])
-    else:
-        raise Exception("Metodo de minimizacion ingresado no esta considerado")
-    
-    data={'step':[i for i in range(len(energy))], 'energy': energy}
-    theta_evol = np.array(theta_evol).T
-    for i in range(len(theta_evol)):
-        if i<object_vqt.qubits:
-            data["d"+str(i)] = theta_evol[i]
-        else:
-            data["p"+str(i)] = theta_evol[i]
-    Result = pd.DataFrame( data )
-    Result.to_csv("VQT"+params["simulation_object"]+".csv")
-
-    data = {}
-    for i in range(len(theta_evol)):
-        if i<object_vqt.qubits:
-            data["d"+str(i)] = [theta_evol[i][-1]]
-        else:
-            data["p"+str(i)] = [theta_evol[i][-1]]
-    Result = pd.DataFrame( data )
-    Result.to_csv("OptimumVQT"+params["simulation_object"]+".csv")
 
 else:
     raise Exception("Clase del metodo no valido")
