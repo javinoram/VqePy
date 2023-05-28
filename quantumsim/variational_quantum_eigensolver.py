@@ -76,7 +76,6 @@ class variational_quantum_eigensolver_electronic(given_ansatz):
         result: float
     '''
     def cost_function(self, theta):
-        #params = [theta[:len(self.singles)*self.repetition], theta[len(self.singles)*self.repetition:]]
         params = [theta[:self.repetition], theta[self.repetition:]]
         result = self.node(theta = params, obs = self.hamiltonian_object)
         return result

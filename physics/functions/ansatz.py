@@ -18,7 +18,6 @@ class given_ansatz():
 
     def set_device(self, params) -> None:
         self.base = params['base']
-        self.shots = params['shots']
 
         ##Maquinas reales
         if self.base == 'qiskit.ibmq':
@@ -29,7 +28,7 @@ class given_ansatz():
             if params['token']:
                 self.token = params['token']
                 self.device= qml.device(self.base, backend=self.backend, 
-                    wires=self.qubits, shots = int(self.shots), 
+                    wires=self.qubits, 
                     ibmqx_token= self.token)
             else:
                 raise Exception("Token de acceso no encontrado")
@@ -41,10 +40,10 @@ class given_ansatz():
                 raise Exception("Backend no encontrado")
             
             self.device= qml.device(self.base, backend=self.backend, 
-                    wires=self.qubits*self, shots = int(self.shots))
+                    wires=self.qubits*self)
         ##Simuladores de pennylane
         else:
-            self.device= qml.device(self.base, wires=self.qubits, shots = int(self.shots))
+            self.device= qml.device(self.base, wires=self.qubits)
         return
 
     def set_hiperparams_circuit(self, params) -> None:

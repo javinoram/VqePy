@@ -29,5 +29,5 @@ minimizate_method_params:
     step_x: 0.8
 
 observable_params:
-    observable: Density charge
+    observable: Density spin
     file: OptimumVQEElectronic.csv
