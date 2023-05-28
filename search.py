@@ -43,9 +43,8 @@ if params["method_class"] == "VQE":
         object_vqe.set_node(params["ansatz_params"])
 
         rep = params["ansatz_params"]["repetitions"]
-        number = (len(object_vqe.singles) + len(object_vqe.doubles))*rep  
-        #theta = np.array( [np.random.randint(314)/100.0  for _ in range(number)] )
-        theta = np.array( [0.0  for _ in range(number)] )             
+        number = 2*rep
+        theta = np.array( [0.2089  for _ in range(number)], requires_grad=True)             
         
     elif params["simulation_object"] == "Spin":
 
@@ -55,11 +54,7 @@ if params["method_class"] == "VQE":
 
         rep = params["ansatz_params"]["repetitions"]
         number = (object_vqe.qubits)*rep
-        theta = np.array( [np.random.randint(314)/100.0  for _ in range(number)] )
-
-    #POR IMPLEMENTAR
-    elif params["simulation_object"] == "Hubbard":
-        pass
+        theta = np.array( [np.random.randint(314)/100.0  for _ in range(number)], requires_grad=True)
     else:
         raise Exception("Error en el tipo de Hamiltoniano")
 

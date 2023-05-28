@@ -12,23 +12,22 @@ hamiltonian_params:
     spin: 1
 
 ansatz_params:
-    repetitions: 3
+    repetitions: 1
     electrons: 2
     base: default.qubit
     backend: 
     interface: autograd
-    shots: 2000.0
+    shots: 1000.0
     token: 
 
-minimizate_method: Scipy
+minimizate_method: Gradient
 minimizate_method_params:
     type: "COBYLA"
-    temperature: 11
     maxiter: 200
     tol: 0.000001
-    step_theta: 0.4
+    step_theta: 0.45
     step_x: 0.8
 
 observable_params:
-    observable: Density spin
+    observable: Density charge
     file: OptimumVQEElectronic.csv

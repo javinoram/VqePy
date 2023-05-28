@@ -40,19 +40,19 @@ class variational_quantum_eigensolver_electronic(given_ansatz):
             else:
                 raise Exception("Mapping no valido, considere jordan_wigner o bravyi_kitaev")
             
-        elif params['charge']:
+        if params['charge']:
             self.charge = params['charge']
 
-        elif params['mult']:
+        if params['mult']:
             self.mult = params['mult']
 
-        elif params['basis']:
+        if params['basis']:
             if params['basis'] in ("sto-3g", "6-31g", "6-311g", "cc-pvdz"):
                 self.basis = params['basis']
             else:
                 raise Exception("Base no valida, considere sto-3g, 6-31g, 6-311g, cc-pvdz")
         
-        elif params['method']:
+        if params['method']:
             if params['method'] in ("pyscf", "dhf"):
                 self.method = params['method']
             else:
@@ -60,13 +60,12 @@ class variational_quantum_eigensolver_electronic(given_ansatz):
 
         self.hamiltonian_object, self.qubits = qchem.molecular_hamiltonian(
             symbols= symbols,
-            coordinates= coordinates,
+            coordinates= coordinates/2,
             mapping= self.mapping,
             charge= self.charge,
             mult= self.mult,
             basis= self.basis,
             method= self.method)
-        self.hamiltonian_object = self.hamiltonian_object
         return
     
     '''
@@ -77,7 +76,8 @@ class variational_quantum_eigensolver_electronic(given_ansatz):
         result: float
     '''
     def cost_function(self, theta):
-        params = [theta[:len(self.singles)*self.repetition], theta[len(self.singles)*self.repetition:]]
+        #params = [theta[:len(self.singles)*self.repetition], theta[len(self.singles)*self.repetition:]]
+        params = [theta[:self.repetition], theta[self.repetition:]]
         result = self.node(theta = params, obs = self.hamiltonian_object)
         return result
 
@@ -125,7 +125,6 @@ class variational_quantum_eigensolver_spin(spin_ansatz):
             result_term = self.node( theta=ansatz, obs= term, pauli= self.hamiltonian_object[i][0])
             exchange = self.hamiltonian_object[i][1]
             for s in conts_spin[str(self.spin)]["2"]:
-            #for i in range(len(result_term)):
                 index = int(s, 2)
-                result += exchange*result_term[index]#*parity(i)
+                result += exchange*result_term[index]
         return result

@@ -59,11 +59,11 @@ class given_ansatz():
 
     def circuit(self, theta, obs):
         qml.BasisState(self.hf_state, wires=range(self.qubits))
-        for _ in range(0, self.repetition):
-            for i, term in enumerate(self.singles):
+        for i in range(0, self.repetition):
+            for j, term in enumerate(self.singles):
                 qml.SingleExcitation(theta[0][i], wires=term)
 
-            for i, term in enumerate(self.doubles):
+            for j, term in enumerate(self.doubles):
                 qml.DoubleExcitation(theta[1][i], wires=term)
         return qml.expval(obs)
     

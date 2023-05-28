@@ -59,10 +59,106 @@ class given_ansatz():
 
     def circuit(self, theta, obs):
         qml.BasisState(self.hf_state, wires=range(self.qubits))
-        for _ in range(0, self.repetition):
-            for i, term in enumerate(self.singles):
+        for i in range(0, self.repetition):
+            for j, term in enumerate(self.singles):
                 qml.SingleExcitation(theta[0][i], wires=term)
 
-            for i, term in enumerate(self.doubles):
+            for j, term in enumerate(self.doubles):
                 qml.DoubleExcitation(theta[1][i], wires=term)
         return qml.probs(wires=obs)
+    
+
+class spin_ansatz():
+    def circuit(self, theta, obs, pauli):
+        pass
+
+    base = ""
+    backend = ""
+    token = ""
+
+    device= qml.device("default.qubit", wires=0)
+    node = qml.QNode(circuit, device, interface="autograd")
+    pattern = "chain"
+    qubits = 0
+    correction = 1
+    repetition = 0
+    shots = 1000
+
+    def set_device(self, params) -> None:
+        self.base = params['base']
+        self.shots = params['shots']
+
+        ##Maquinas reales
+        if self.base == 'qiskit.ibmq':
+            if params['backend']:
+                self.backend = params['backend']
+            else:
+                raise Exception("Backend no encontrado")
+            if params['token']:
+                self.token = params['token']
+                self.device= qml.device(self.base, backend=self.backend, 
+                    wires=self.qubits*self.correction, shots = int(self.shots), 
+                    ibmqx_token= self.token)
+            else:
+                raise Exception("Token de acceso no encontrado")
+        ##Simuladores de qiskit
+        elif self.base == "qiskit.aer":
+            if params['backend']:
+                self.backend = params['backend']
+            else:
+                raise Exception("Backend no encontrado")
+            self.device= qml.device(self.base, backend=self.backend, 
+                    wires=self.qubits*self.correction, shots = int(self.shots))
+        ##Simuladores de pennylane
+        else:
+            self.device= qml.device(self.base, wires=self.qubits*self.correction, shots = int(self.shots))
+        return
+    
+    def set_node(self, params) -> None:
+        self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
+        return
+    
+
+    def single_rotation(self, params):
+        for i in range(0, self.qubits):
+            for j in range(self.correction):
+                qml.RY(params[i], wires=[self.correction*i+j])
+        return
+
+    def non_local_gates(self):
+        if self.pattern == 'chain':
+            for i in range(0, self.qubits-1):
+                for j in range(self.correction):
+                    qml.CNOT(wires=[self.correction*i+j, self.correction*(i+1)+j])
+        if self.pattern == 'ring':
+            if self.qubits == 2:
+                for j in range(self.correction):
+                    qml.CNOT(wires=[j, self.correction+j])
+            else:
+                for i in range(0, self.qubits-1):
+                    for j in range(self.correction):
+                        qml.CNOT(wires=[self.correction*i+j, self.correction*(i+1)+j])
+        return
+
+    def circuit(self, theta, obs, pauli):
+        qml.BasisState([0 for _ in range(self.qubits*self.correction)], wires=range(self.qubits*self.correction))
+        rotation_number = self.qubits
+        for i in range(0, self.repetition):
+            self.single_rotation(theta[i*rotation_number:(i+1)*rotation_number])
+            self.non_local_gates()
+
+        aux = []
+        for w in obs:
+            for i in range(self.correction):
+                aux.append( self.correction*w + i)
+
+        if 'X' in pauli:
+            for i in aux:
+                for j in range(self.correction):
+                    qml.Hadamard(wires=[self.correction*i+j])
+        if 'Y' in pauli:
+            for i in aux:
+                for j in range(self.correction):
+                    qml.S(wires=[self.correction*i+j])
+                    qml.Hadamard(wires=[self.correction*i+j])
+        return qml.probs(wires=aux)
