@@ -1,22 +1,15 @@
 from quantumsim.functions.ansatz import *
 from quantumsim.functions.min_methods import *
-from quantumsim.functions.constans import *
+from quantumsim.functions.funciones import *
 from quantumsim.optimizacion_structure import *
 from quantumsim.variational_quantum_eigensolver import *
-from quantumsim.variational_quantum_thermalizer import *
 
 from pennylane import numpy as np
-import scipy.linalg as la
-import scipy as sc
 import sys
 import pandas as pd
-
 import yaml
 
 '''
-Regex de ejecución: python3 main.py <parametros .yml>
-
-
 Lectura de parametros de un archivo YML
 '''
 with open(sys.argv[len(sys.argv)-1], 'r') as stream:
@@ -44,10 +37,9 @@ if params["method_class"] == "VQE":
 
         rep = params["ansatz_params"]["repetitions"]
         number = 2*rep
-        theta = np.array( [0.2089  for _ in range(number)], requires_grad=True)             
+        theta = np.array( [0.0  for _ in range(number)], requires_grad=True)             
         
     elif params["simulation_object"] == "Spin":
-
         object_vqe = variational_quantum_eigensolver_spin(params["hamiltonian_params"])
         object_vqe.set_device(params["ansatz_params"])
         object_vqe.set_node(params["ansatz_params"])
@@ -55,6 +47,17 @@ if params["method_class"] == "VQE":
         rep = params["ansatz_params"]["repetitions"]
         number = (object_vqe.qubits)*rep
         theta = np.array( [np.random.randint(314)/100.0  for _ in range(number)], requires_grad=True)
+    
+    elif params["simulation_object"]=="FermiHubbard":
+        object_vqe = variational_quantum_eigensolver_fermihubbard(params["hamiltonian_params"])
+        object_vqe.set_device(params["ansatz_params"])
+        object_vqe.set_hiperparams_circuit(params["ansatz_params"])
+        object_vqe.set_node(params["ansatz_params"])
+
+        rep = params["ansatz_params"]["repetitions"]
+        number = 2*rep
+        theta = np.array( [np.random.randint(314)/100.0  for _ in range(number)], requires_grad=True)
+    
     else:
         raise Exception("Error en el tipo de Hamiltoniano")
 
@@ -65,21 +68,22 @@ if params["method_class"] == "VQE":
     else:
         raise Exception("Metodo de minimizacion ingresado no esta considerado")
     
-    #Guarda toda la evolucion de los parametros en un .csv
-    #Guarda los parametros optimos en otro archivo
-    #
     data={'step':[i for i in range(len(energy))], 'energy': energy}
     theta_evol = np.array(theta_evol).T
     for i in range(len(theta_evol)):
         data["p"+str(i)] = theta_evol[i]
     Result = pd.DataFrame( data )
-    Result.to_csv("VQE"+params["simulation_object"]+".csv")
-    
+    Result.to_csv("EvolutionParamsVQE.csv")
+
     data = {}
     for i in range(len(theta_evol)):
         data["p"+str(i)] = [theta_evol[i][-1]]
     Result = pd.DataFrame( data )
-    Result.to_csv("OptimumVQE"+params["simulation_object"]+".csv")
+    Result.to_csv("OptimumParamsVQE.csv")
+
+    data = { 'Energy': [energy[-1]], 'Qubits': [object_vqe.qubits] }
+    Result = pd.DataFrame( data )
+    Result.to_csv("InformationVQE.csv")
 
     '''
     Optimizacion de estructura
@@ -120,7 +124,7 @@ elif params["method_class"] == "SO":
         else:
             data["p"+str(i-len(coordinates))] = theta_evol[i]
     Result = pd.DataFrame( data )
-    Result.to_csv("SO"+params["simulation_object"]+".csv")
+    Result.to_csv("EvolutionParamsSO.csv")
 
     data = {}
     for i in range(len(theta_evol)):
@@ -129,56 +133,11 @@ elif params["method_class"] == "SO":
         else:
             data["p"+str(i-len(coordinates))] = [theta_evol[i][-1]]
     Result = pd.DataFrame( data )
-    Result.to_csv("OptimumSO"+params["simulation_object"]+".csv")
+    Result.to_csv("OptimumParamsSO.csv")
 
-    '''
-    Variational Quantum Thermalizer
-        Metodo para hamiltonianos de espines de espin 0.5
-    '''
-elif params["method_class"] == "VQT":
-    if params["simulation_object"] != "Spin" and params["hamiltonian_params"]["spin"] !=0.5:
-        raise Exception("Solo hamiltonianos de espin 0.5 permitidos")
-    
-    object_vqt = variational_quantum_thermalizer_spin(params["hamiltonian_params"])
-    object_vqt.set_device(params["ansatz_params"])
-    object_vqt.set_node(params["ansatz_params"])
-
-    rep = params["ansatz_params"]["repetitions"]
-    number = (object_vqt.qubits)*rep
-
-    theta = np.array( [np.random.randint(314)/100.0  for _ in range(number)] )
-    dist = np.array( [np.random.randint(100)/100.0  for _ in range(object_vqt.qubits)] )
-
-    if params["minimizate_method_params"]['temperature'] and params["minimizate_method_params"]['temperature']>0:
-        beta = 1.0/params["minimizate_method_params"]['temperature']
-    else: 
-        raise Exception("Temperatura no valida")
-    
-    if params["minimizate_method"] == "Gradient":
-        energy, theta_evol, theta = gradiend_method_VQT(object_vqt.cost_function, theta, dist, beta, params["minimizate_method_params"])
-    elif params["minimizate_method"] == "Scipy":
-        energy, theta_evol, theta = scipy_method_VQT(object_vqt.cost_function, theta, dist, beta, params["minimizate_method_params"])
-    else:
-        raise Exception("Metodo de minimizacion ingresado no esta considerado")
-    
-    data={'step':[i for i in range(len(energy))], 'energy': energy}
-    theta_evol = np.array(theta_evol).T
-    for i in range(len(theta_evol)):
-        if i<object_vqt.qubits:
-            data["d"+str(i)] = theta_evol[i]
-        else:
-            data["p"+str(i)] = theta_evol[i]
+    data = { "Energy": [energy[-1]], "Qubits": [object_struc.qubits], }
     Result = pd.DataFrame( data )
-    Result.to_csv("VQT"+params["simulation_object"]+".csv")
-
-    data = {}
-    for i in range(len(theta_evol)):
-        if i<object_vqt.qubits:
-            data["d"+str(i)] = [theta_evol[i][-1]]
-        else:
-            data["p"+str(i)] = [theta_evol[i][-1]]
-    Result = pd.DataFrame( data )
-    Result.to_csv("OptimumVQT"+params["simulation_object"]+".csv")
+    Result.to_csv("InformationSO.csv")
 
 else:
     raise Exception("Clase del metodo no valido")

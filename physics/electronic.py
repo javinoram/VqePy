@@ -1,4 +1,5 @@
 from physics.functions.ansatz import *
+from physics.functions.constans import *
 from pennylane import qchem
 import math
 
@@ -49,7 +50,7 @@ class electronic_hamiltonian(given_ansatz):
             else:
                 raise Exception("Metodo no valido, considere dhf o pyscf")
 
-        self.hamiltonian_object, self.qubits = qchem.molecular_hamiltonian(
+        aux_h, self.qubits = qchem.molecular_hamiltonian(
             symbols= symbols,
             coordinates= coordinates/2,
             mapping= self.mapping,
@@ -57,26 +58,33 @@ class electronic_hamiltonian(given_ansatz):
             mult= self.mult,
             basis= self.basis,
             method= self.method)
-        self.hamiltonian_object = self.hamiltonian_object
+        
+        coeff, expression = aux_h.terms()
+        Pauli_terms = []
+
+        for k, term in enumerate(expression):
+            string = Pauli_function(term, self.qubits)
+            Pauli_terms.append([coeff[k], string])
+
+        self.hamiltonian_object = conmute_group(Pauli_terms)
         return
     
-    def density_charge(self, theta):
+    
+    def density_charge(self, theta, time, n):
         number_pairs = int( self.qubits/2 )
         params = [theta[:self.repetition], theta[self.repetition:]]
         value_per_sites = []
         for i in range(number_pairs):
-            result_down = self.node(theta = params, obs =[2*i])
-            result_up = self.node(theta = params, obs =[2*i+1])
+            result_down, result_up = self.node(theta = params, obs = [2*i, 2*i+1], time= time, n=n, hamiltonian=self.hamiltonian_object)
             value_per_sites.append(result_up[1] + result_down[1])
         return value_per_sites
     
 
-    def density_spin(self, theta):
+    def density_spin(self, theta, time, n):
         number_pairs = int( self.qubits/2 )
         params = [theta[:self.repetition], theta[self.repetition:]]
         value_per_sites = []
         for i in range(number_pairs):
-            result_down = self.node(theta = params, obs =[2*i])
-            result_up = self.node(theta = params, obs =[2*i+1])
+            result_down, result_up = self.node(theta = params, obs = [2*i, 2*i+1], time= time, n=n, hamiltonian=self.hamiltonian_object)
             value_per_sites.append(result_up[1] - result_down[1])
         return value_per_sites

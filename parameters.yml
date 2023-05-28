@@ -1,15 +1,23 @@
 method_class : VQE
-simulation_object: Electronic
+simulation_object: FermiHubbard
 
 hamiltonian_params:
-    file: h2.xyz
+    #Molecular
+    file: he2.xyz
     mapping: jordan_wigner
     charge: 
     mult:
-    basis:
+    basis: 6-311g
     method:
-    pauli_string: [[ZZI, 0.1]]
-    spin: 1
+
+    #Spin
+    pauli_string: [[1, ZZI], [1, IZZ]]
+    spin: 0.5
+
+    #FermiHubbard
+    sites: 2
+    hopping: -1.0
+    potential: -2.0
 
 ansatz_params:
     repetitions: 1
@@ -20,14 +28,32 @@ ansatz_params:
     shots: 1000.0
     token: 
 
-minimizate_method: Gradient
+minimizate_method: Scipy
 minimizate_method_params:
-    type: "COBYLA"
-    maxiter: 200
+    type: SLSQP
+    maxiter: 100
     tol: 0.000001
-    step_theta: 0.45
+    step_theta: 0.4
     step_x: 0.8
 
+
+
+###
 observable_params:
-    observable: Density spin
-    file: OptimumVQEElectronic.csv
+    observable: Specific heat
+
+    #file -> ground state
+    file: #OptimumParamsVQE.csv
+    qubits: 3
+
+    #state -> estado puro arbitrario
+    #tener en consideracion la representacion
+    #de cada sistema
+    state: "000"
+
+    lim_sup: 0.1
+    lim_inf: 10
+
+    number_points: 21
+    delta: 0.1
+    n: 20

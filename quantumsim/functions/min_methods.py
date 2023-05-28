@@ -2,191 +2,144 @@ import pennylane as qml
 import math
 import scipy.linalg as la
 import scipy as sc
+import warnings
 from pennylane import numpy as np
-from quantumsim.functions.constans import *
+from quantumsim.functions.funciones import *
 
-'''
-Funcion: gradiend_method_VQE
-input:
-    cost_function: funcion de coste
-    theta: vector de parametros de rotacion
-    params: parametros de ejecucion
+class TookTooManyIters(Warning):
+    pass
 
-return:
-    energy: lista de convergencia de energias
-    theta_evol: lista de convergencia de los parametros en la ejecucion
-    theta: vector de parametros de rotacion optimos
-'''
-def gradiend_method_VQE(cost_function, theta, params):
-    energy = [cost_function(theta)]
-    theta_evol = [theta]
-    opt_theta = qml.GradientDescentOptimizer(stepsize=params["step_theta"])
+class scipy_optimizer():
+    maxiter = 100
+    type_method = "SLSQP"
+    tol = 1e-6
+    nit = 0
+    number = 0
 
-    for _ in range(params["maxiter"]):
-        theta.requires_grad = True
-        theta = opt_theta.step(cost_function, theta)
-        energy.append(cost_function(theta))
-        theta_evol.append(theta)
-        prev_energy = energy[len(energy)-2]
+    def __init__(self, params):
+        self.number = params["number"]
 
-        conv = np.abs(energy[-1] - prev_energy)
-        if conv <= params["tol"]:
-            break
-    return energy, theta_evol, theta
+        if params["tol"]:
+            self.tol = params["tol"]
+        
+        if params["maxiter"]:
+            self.maxiter = params["maxiter"]
+        
+        if params["type"]:
+            self.type_method = params["type"]
 
-'''
-Funcion: scipy_method_VQE
-input:
-    cost_function: funcion de coste
-    theta: vector de parametros de rotacion
-    params: parametros de ejecucion
 
-return:
-    energy: lista de convergencia de energias
-    theta_evol: lista de convergencia de los parametros en la ejecucion
-    theta: vector de parametros de rotacion optimos
-'''
+    def callback(self, x):
+        self.nit += 1
+        if self.nit == self.maxiter:
+            print("Maximo numero de iteraciones")
+            warnings.warn("Terminating optimization: iteration limit reached", TookTooManyIters)
 
-def scipy_method_VQE(cost_function, theta, params):
-    energy = []
-    theta_evol = []
+    def VQD(self, cost_function, overlap_cost_function, k,):
+        energy = []
+        previous_theta = []
 
-    def cost_aux(x): 
-        result = cost_function(x)
-        energy.append(result)
-        theta_evol.append(x)
-        return result
+        def cost_aux(x): 
+            result = cost_function(x) 
+            for previous in previous_theta:
+                result += 3*overlap_cost_function(x, previous)
+            return result
+        
+        for _ in range(k):  
+            self.nit = 0
+            theta = np.array( [np.random.randint(314)/100.0  for _ in range(self.number)], requires_grad=True)
+            ops = {'maxiter': self.maxiter}
+            xs = sc.optimize.minimize(cost_aux, theta, method=self.type_method, callback=self.callback, tol=self.tol, options=ops)['x']
+            energy.append(cost_function(xs))
+            previous_theta.append(xs)
+        return energy, previous_theta
     
-    ops = {'maxiter': params["maxiter"], 'tol': params["tol"]}
-    theta = sc.optimize.minimize(cost_aux, theta, method=params["type"], options= ops)['x']
-    return energy, theta_evol, theta
+    def VQE(self, cost_function, theta):
+        energy = []
+        theta_evol = []
+        self.nit = 0
 
-'''
-Funcion: scipy_method_OS
-input:
-    cost_function: funcion de coste
-    theta: vector de parametros de rotacion
-    x: vector de posiciones iniciales
-    params: parametros de ejecucion
-
-return:
-    energy: lista de convergencia de energias
-    theta_evol: lista de convergencia de los parametros en la ejecucion
-    theta: vector de parametros optimos
-'''
-def scipy_method_OS(cost_function, theta, x, params):
-    energy = []
-    theta_evol = []
-
-    def cost_aux(psi): 
-        result = cost_function(psi[len(x):], psi[:len(x)])
-        energy.append(result)
-        theta_evol.append(psi)
-        return result
+        def cost_aux(x): 
+            result = cost_function(x)
+            energy.append(result)
+            theta_evol.append(x)
+            return result
+        
+        ops = {'maxiter': self.maxiter}
+        theta = sc.optimize.minimize(cost_aux, theta, method=self.type_method, callback=self.callback, tol=self.tol, options=ops)['x']
+        return energy, theta_evol, theta
     
-    ops = {'maxiter': params["maxiter"], 'tol': params["tol"]}
-    theta = sc.optimize.minimize(cost_aux, np.concatenate((x,theta), axis=0), method=params["type"], options= ops)['x']
-    return energy, theta_evol, theta
+    def OS(self, cost_function, x):
+        energy = []
+        theta_evol = []
+        self.nit = 0
 
-'''
-Funcion: gradiend_method_OS
-input:
-    cost_function: funcion de coste
-    theta: vector de parametros de rotacion
-    x: vector de posiciones iniciales
-    params: parametros de ejecucion
-    grad: gradiente del vector x
-
-return:
-    energy: lista de convergencia de energias
-    theta_evol: lista de convergencia de los parametros en la ejecucion
-    theta: vector de parametros optimos
-'''
-def gradiend_method_OS(cost_function, theta, x, params, grad):
-    energy = []
-    theta_evol = []
-    opt_theta = qml.GradientDescentOptimizer(stepsize=params["step_theta"])
-    opt_x = qml.GradientDescentOptimizer(stepsize=params["step_x"])
-
-    for _ in range(params["maxiter"]):
-        theta.requires_grad = True
-        x.requires_grad = False
-        theta, _ = opt_theta.step(cost_function, theta, x)
-
-        x.requires_grad = True
-        theta.requires_grad = False
-        _, x = opt_x.step(cost_function, theta, x, grad_fn=grad)
-
-        theta_evol.append( np.concatenate((x,theta), axis=0) )
-        energy.append(cost_function(theta, x))
-        if np.max(grad(theta, x)) <= params["tol"]:
-            break
-
-    return energy, theta_evol, np.concatenate((x,theta), axis=0)
+        def cost_aux(psi): 
+            result = cost_function(psi[len(x):], psi[:len(x)])
+            energy.append(result)
+            theta_evol.append(psi)
+            print(result)
+            return result
+        
+        ops = {'maxiter': self.maxiter}
+        theta = np.array( [np.random.randint(314)/100.0  for _ in range(self.number)], requires_grad=True)
+        theta = sc.optimize.minimize(cost_aux, np.concatenate((x,theta), axis=0), method=self.type_method, callback=self.callback, tol=self.tol, options=ops)['x']
+        return energy, theta_evol, theta
 
 
-'''
-Funcion: gradiend_method_VQT
-input:
-    cost_function: funcion de coste
-    theta: vector de parametros de rotacion
-    dist: vector de parametros de la districion de probabilidad
-    beta: parametro de temperatura (1/T)
-    params: parametros de ejecucion
 
-return:
-    energy: lista de convergencia de energias
-    theta_evol: lista de convergencia de los parametros en la ejecucion
-    theta: vector de parametros optimos
-'''
-def gradiend_method_VQT(cost_function, theta, dist, beta, params):
-    def cost_aux(psi): 
-        result = cost_function(psi, beta)
-        return result
+class gradiend_optimizer():
+    maxiter = 100
+    theta_optimizer = None
+    x_optimizer = None
+    tol = 1e-6
+    number = 0
+
+    def __init__(self, params):
+        self.number = params["number"]
+        if params["tol"]:
+            self.tol = params["tol"]
+        
+        if params["maxiter"]:
+            self.maxiter = params["maxiter"]
+
+        if params["step_theta"]:
+            self.theta_optimizer = qml.GradientDescentOptimizer(stepsize=params["step_theta"])
+
+        if params["step_x"]:
+            self.x_optimizer = qml.GradientDescentOptimizer(stepsize=params["step_x"])
+
+    def VQE(self, cost_function, theta):
+        energy = [cost_function(theta)]
+        theta_evol = [theta]
+
+        for _ in range(self.maxiter):
+            theta.requires_grad = True
+            theta = self.theta_optimizer.step(cost_function, theta)
+            energy.append(cost_function(theta))
+            theta_evol.append(theta)
+            prev_energy = energy[len(energy)-2]
+
+            conv = np.abs(energy[-1] - prev_energy)
+            if conv <= self.tol:
+                break
+        return energy, theta_evol, theta
+        
     
-    theta = np.concatenate((dist, theta), axis=0)
-    energy = [cost_aux(theta)]
-    theta_evol = [theta]
-    opt_theta = qml.GradientDescentOptimizer(stepsize=params["step_theta"])
+    def OS(self, cost_function, theta, x, grad):
+        energy = []
+        theta_evol = []
 
-    for _ in range(params["maxiter"]):
-        theta.requires_grad = True
-        theta = opt_theta.step(cost_aux, theta)
+        for _ in range(self.maxiter):
+            theta.requires_grad = True
+            x.requires_grad = False
+            theta, _ = self.theta_optimizer.step(cost_function, theta, x)
 
-        energy.append(cost_aux(theta))
-        theta_evol.append(theta)
-        prev_energy = energy[len(energy)-2]
+            x.requires_grad = True
+            theta.requires_grad = False
+            _, x = self.x_optimizer.step(cost_function, theta, x, grad_fn=grad)
 
-        conv = np.abs(energy[-1] - prev_energy)
-        if conv <= params["tol"]:
-            break
-    return energy, theta_evol, theta
+            if np.max(grad(theta, x)) <= self.tol:
+                break
 
-
-'''
-Funcion: gradiend_method_VQT
-input:
-    cost_function: funcion de coste
-    theta: vector de parametros de rotacion
-    dist: vector de parametros de la districion de probabilidad
-    beta: parametro de temperatura (1/T)
-    params: parametros de ejecucion
-
-return:
-    energy: lista de convergencia de energias
-    theta_evol: lista de convergencia de los parametros en la ejecucion
-    theta: vector de parametros optimos
-'''
-def scipy_method_VQT(cost_function, theta, dist, beta, params):
-    energy = []
-    theta_evol = []
-
-    def cost_aux(psi): 
-        result = cost_function(psi, beta)
-        energy.append(result)
-        theta_evol.append(psi)
-        return result
-    
-    ops = {'maxiter': params["maxiter"], 'tol': params["tol"]}
-    theta = sc.optimize.minimize(cost_aux, np.concatenate((dist, theta), axis=0), method=params["type"], options= ops)['x']
-    return energy, theta_evol, theta
+        return energy, theta_evol, np.concatenate((x,theta), axis=0)
