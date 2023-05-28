@@ -1,5 +1,5 @@
 method_class : VQE
-simulation_object: Electronic
+simulation_object: Spin
 
 hamiltonian_params:
     file: h2.xyz
@@ -20,14 +20,17 @@ ansatz_params:
     shots: 1000.0
     token: 
 
-minimizate_method: Gradient
+minimizate_method: Scipy
 minimizate_method_params:
     type: "COBYLA"
-    maxiter: 200
+    maxiter: 3000
     tol: 0.000001
-    step_theta: 0.45
+    step_theta: 0.4
     step_x: 0.8
 
 observable_params:
-    observable: Density spin
-    file: OptimumVQEElectronic.csv
+    observable: Specific heat
+    file: OptimumVQESpin.csv
+    lim_sup: 0.1
+    lim_inf: 10
+    number_points: 7
