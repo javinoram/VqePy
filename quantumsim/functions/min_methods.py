@@ -57,8 +57,8 @@ def scipy_method_VQE(cost_function, theta, params):
         theta_evol.append(x)
         return result
     
-    ops = {'maxiter': params["maxiter"], 'tol': params["tol"]}
-    theta = sc.optimize.minimize(cost_aux, theta, method=params["type"], options= ops)['x']
+    ops = {'maxiter': params["maxiter"]}
+    theta = sc.optimize.minimize(cost_aux, theta, method=params["type"], tol=params["tol"], options= ops)['x']
     return energy, theta_evol, theta
 
 '''
@@ -84,8 +84,8 @@ def scipy_method_OS(cost_function, theta, x, params):
         theta_evol.append(psi)
         return result
     
-    ops = {'maxiter': params["maxiter"], 'tol': params["tol"]}
-    theta = sc.optimize.minimize(cost_aux, np.concatenate((x,theta), axis=0), method=params["type"], options= ops)['x']
+    ops = {'maxiter': params["maxiter"]}
+    theta = sc.optimize.minimize(cost_aux, np.concatenate((x,theta), axis=0), method=params["type"], tol=params["tol"], options= ops)['x']
     return energy, theta_evol, theta
 
 '''
