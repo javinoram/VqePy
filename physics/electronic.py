@@ -60,23 +60,23 @@ class electronic_hamiltonian(given_ansatz):
         self.hamiltonian_object = self.hamiltonian_object
         return
     
-    def density_charge(self, theta):
+    def density_charge(self, theta, time):
         number_pairs = int( self.qubits/2 )
         params = [theta[:self.repetition], theta[self.repetition:]]
         value_per_sites = []
         for i in range(number_pairs):
-            result_down = self.node(theta = params, obs =[2*i])
-            result_up = self.node(theta = params, obs =[2*i+1])
+            result_down = self.node(theta = params, hamiltonian=self.hamiltonian_object, obs =[2*i], time=time)
+            result_up = self.node(theta = params, hamiltonian=self.hamiltonian_object, obs =[2*i+1], time=time)
             value_per_sites.append(result_up[1] + result_down[1])
         return value_per_sites
     
 
-    def density_spin(self, theta):
+    def density_spin(self, theta, time):
         number_pairs = int( self.qubits/2 )
         params = [theta[:self.repetition], theta[self.repetition:]]
         value_per_sites = []
         for i in range(number_pairs):
-            result_down = self.node(theta = params, obs =[2*i])
-            result_up = self.node(theta = params, obs =[2*i+1])
+            result_down = self.node(theta = params, hamiltonian=self.hamiltonian_object, obs =[2*i], time=time)
+            result_up = self.node(theta = params, hamiltonian=self.hamiltonian_object, obs =[2*i+1], time=time)
             value_per_sites.append(result_up[1] - result_down[1])
         return value_per_sites

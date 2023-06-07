@@ -8,8 +8,8 @@ hamiltonian_params:
     mult:
     basis:
     method:
-    pauli_string: [[ZZI, 0.1]]
-    spin: 1
+    pauli_string: [[ZZI, 1], [IZZ, 1]]
+    spin: 0.5
 
 ansatz_params:
     repetitions: 1
@@ -22,15 +22,17 @@ ansatz_params:
 
 minimizate_method: Scipy
 minimizate_method_params:
-    type: "COBYLA"
-    maxiter: 3000
+    type: SLSQP
+    maxiter: 100
     tol: 0.000001
-    step_theta: 0.4
+    step_theta: 1.0
     step_x: 0.8
 
 observable_params:
-    observable: Specific heat
+    observable: Magnetization GS
     file: OptimumVQESpin.csv
-    lim_sup: 0.1
-    lim_inf: 10
-    number_points: 7
+    lim_sup: 0.0
+    lim_inf: 100
+
+    number_points: 101
+    delta: 0.2

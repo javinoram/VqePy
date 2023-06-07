@@ -127,3 +127,41 @@ class variational_quantum_eigensolver_spin(spin_ansatz):
                 index = int(s, 2)
                 result += exchange*result_term[index]
         return result
+    
+
+'''
+    1D Hubbard model, lineal
+'''
+class variational_quantum_eigensolver_hubbard(given_ansatz):
+    hamiltonian_object= None
+
+    hopping_index = []
+    hopping = 0.0
+
+    potential_index = []
+    potential = 0.0
+
+    qubits = 0
+    
+    def __init__(self, params):
+        self.qubits = params["Sites"]*2
+        self.hamiltonian_object = None
+        self.hopping = params["Hopping"]
+        self.potential = params["Potential"]
+        for i in range( params["Sites"] ):
+            index = [ params["Sites"]*i,  params["Sites"]*i+1]
+            self.potential_index.append(index)
+
+        return
+    
+    '''
+    Funcion de coste: Funcion de coste que utiliza la funcion de valor esperado de qml
+    input:
+        theta: list [float]
+    return:
+        result: float
+    '''
+    def cost_function(self, theta):
+        params = [theta[:self.repetition], theta[self.repetition:]]
+        result = self.node(theta = params, obs = self.hamiltonian_object)
+        return result

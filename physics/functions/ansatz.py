@@ -1,4 +1,5 @@
 import pennylane as qml
+from pennylane.templates import ApproxTimeEvolution
 
 class given_ansatz():
     def circuit(self, theta, obs):
@@ -53,10 +54,10 @@ class given_ansatz():
         return
     
     def set_node(self, params) -> None:
-        self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
+        self.node = qml.QNode(self.circuit_time, self.device, interface=params['interface'])
         return
 
-    def circuit(self, theta, obs):
+    def circuit_time(self, theta, hamiltonian, obs, time):
         qml.BasisState(self.hf_state, wires=range(self.qubits))
         for i in range(0, self.repetition):
             for j, term in enumerate(self.singles):
@@ -64,6 +65,8 @@ class given_ansatz():
 
             for j, term in enumerate(self.doubles):
                 qml.DoubleExcitation(theta[1][i], wires=term)
+        
+        ApproxTimeEvolution(hamiltonian, time, 3)
         return qml.probs(wires=obs)
     
 
@@ -117,6 +120,34 @@ class spin_ansatz():
         self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
         return
     
+    def ZZ(self, index, t):
+        qml.CNOT(wires=index)
+        qml.RZ(2*t, wires=index[1])
+        qml.CNOT(wires=index)
+        return
+
+    def YY(self, index, t):
+        qml.S(wires=index)
+        qml.H(wires=index)
+
+        qml.CNOT(wires=index)
+        qml.RZ(2*t, wires=index[1])
+        qml.CNOT(wires=index)
+
+        qml.H(wires=index)
+        qml.S(wires=index)
+        return
+
+    def XX(self, index, t):
+        qml.H(wires=index)
+
+        qml.CNOT(wires=index)
+        qml.RZ(2*t, wires=index[1])
+        qml.CNOT(wires=index)
+
+        qml.H(wires=index)
+        return
+    
 
     def single_rotation(self, params):
         for i in range(0, self.qubits):
@@ -139,12 +170,22 @@ class spin_ansatz():
                         qml.CNOT(wires=[self.correction*i+j, self.correction*(i+1)+j])
         return
 
-    def circuit(self, theta, obs, pauli):
+    def circuit(self, theta, hamiltonian, index_list, obs, pauli, time):
         qml.BasisState([0 for _ in range(self.qubits*self.correction)], wires=range(self.qubits*self.correction))
         rotation_number = self.qubits
         for i in range(0, self.repetition):
             self.single_rotation(theta[i*rotation_number:(i+1)*rotation_number])
             self.non_local_gates()
+
+
+        for i, term in enumerate(hamiltonian):
+            if 'Z' in term[0]:
+                self.ZZ(index_list[i], time)
+            if 'Y' in term[0]:
+                self.YY(index_list[i], time)
+            if 'X' in term[0]:
+                self.XX(index_list[i], time)
+
 
         aux = []
         for w in obs:

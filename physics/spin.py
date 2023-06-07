@@ -26,10 +26,11 @@ class spin_hamiltonian(spin_ansatz):
         return
     
 
-    def magnetization(self, theta):
+    def magnetization(self, theta, time):
         value_per_site = []
         for i in range(self.qubits):
-            result_term = self.node(theta = theta, obs =[i], pauli= "Z")
+            result_term = self.node(theta = theta, hamiltonian=self.hamiltonian_object,
+                index_list =self.hamiltonian_index, obs =[i], pauli= "Z", time=time)
             result = 0.0
             for s in conts_spin[str(self.spin)]["1"]:
                 index = int(s, 2)
@@ -119,8 +120,8 @@ class variational_quantum_thermalizer_spin(spin05_ansatz):
             
             for j in range(0, len(state)):
                 result_aux = result_aux * np.sqrt(distribution[j][state[j]])
-                result_aux_2 = result_aux_2 * distribution[j][state[j]]
+                result_aux_2 = result_aux_2 * np.sqrt(distribution[j][state[j]])
             energy += result_aux
             energy_square += result_aux_2
-
-        return (energy_square - energy*energy)/(T*T*k_b)
+            print(energy, energy_square)
+        return (energy_square - energy*energy)/(T*T)

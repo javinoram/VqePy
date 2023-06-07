@@ -32,28 +32,27 @@ if params["simulation_object"] == "Electronic":
     object_vqe.set_hiperparams_circuit(params["ansatz_params"])
     object_vqe.set_node(params["ansatz_params"])
 
+    n = params["observable_params"]['number_points']
+    Time = [ params["observable_params"]['delta']*i for i in range(n) ]
+    density_values = []
+
     if params["observable_params"]['observable'] == "Density spin":
-        values = object_vqe.density_spin( theta )
+        for t in Time:
+            value = object_vqe.density_spin( theta, t )
+            density_values.append( value )
     elif params["observable_params"]['observable'] == "Density charge":
-        values = object_vqe.density_charge( theta )
+        for t in Time:
+            value = object_vqe.density_charge( theta, t )
+            density_values.append( value )
     else:
         raise Exception("Observable ingresado no encontrado")
-    print(values)
+    
+    Result = pd.DataFrame( density_values )
+    Result.to_csv("DensityValues.csv")
+    
 
-elif params["simulation_object"] == "Spin":     
-    if params["observable_params"]['observable'] == "Magnetization GS":
-        object_spin = spin_hamiltonian(params["hamiltonian_params"])
-        object_spin.set_device(params["ansatz_params"])
-        object_spin.set_node(params["ansatz_params"])
 
-        rep = params["ansatz_params"]["repetitions"]
-        
-        if params["observable_params"]['file']:
-            theta = pd.read_csv(params["observable_params"]['file']).to_numpy()[0][1:]
-        else:
-            raise Exception("Archivo de parametros no encontrado")
-        print( object_spin.magnetization(theta) )
-
+elif params["simulation_object"] == "Spin":
     if params["observable_params"]['observable'] == "Specific heat":
         sup = params["observable_params"]['lim_sup']
         inf = params["observable_params"]['lim_inf']
@@ -82,5 +81,8 @@ elif params["simulation_object"] == "Spin":
         pass
     else:
         raise Exception("Observable ingresado no encontrado")
+    
+elif params["simulation_object"] == "Hubbard":
+    pass
 else:
     raise Exception("Hamiltoniano ingreaso no valido")

@@ -55,6 +55,9 @@ if params["method_class"] == "VQE":
         rep = params["ansatz_params"]["repetitions"]
         number = (object_vqe.qubits)*rep
         theta = np.array( [np.random.randint(314)/100.0  for _ in range(number)], requires_grad=True)
+    
+    elif params["simulation_object"]=="Hubbard":
+        pass
     else:
         raise Exception("Error en el tipo de Hamiltoniano")
 
