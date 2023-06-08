@@ -1,5 +1,5 @@
 method_class : VQE
-simulation_object: Electronic
+simulation_object: Spin
 
 hamiltonian_params:
     file: h2.xyz
@@ -8,8 +8,8 @@ hamiltonian_params:
     mult:
     basis:
     method:
-    pauli_string: [[ZZI, 1]]
-    spin: 1
+    pauli_string: [[ZZI, 1], [IZZ, 1]]
+    spin: 0.5
 
 ansatz_params:
     repetitions: 1
@@ -29,8 +29,8 @@ minimizate_method_params:
     step_x: 0.8
 
 observable_params:
-    observable: Density charge
-    file: OptimumVQEElectronic.csv
+    observable: Magnetization GS
+    file: OptimumVQESpin.csv
     lim_sup: 0.0
     lim_inf: 100
 
