@@ -3,7 +3,7 @@ import math
 import scipy.linalg as la
 import scipy as sc
 from pennylane import numpy as np
-from quantumsim.functions.constans import *
+from quantumsim.functions.funciones import *
 
 '''
 Funcion: gradiend_method_VQT

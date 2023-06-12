@@ -2,6 +2,9 @@ from pennylane import numpy as np
 import pandas as pd
 import pennylane as qml
 
+def binary_to_string(state):
+    return ''.join([str(i) for i in state])
+
 def Pauli_function(term, qubits):
     auxiliar_string =[]
     if type(term)==qml.ops.qubit.non_parametric_ops.PauliZ:
@@ -31,6 +34,20 @@ def Pauli_function(term, qubits):
     elif type(term)==qml.ops.identity.Identity:
         for j in range(qubits):
             auxiliar_string.append("I")
+
+
+    elif type(term) == list:
+        auxiliar_string = ["I" for _ in range(qubits)]
+        for pauli in term:
+            index = pauli.wires[0]
+            if type(pauli)==qml.ops.qubit.non_parametric_ops.PauliZ:
+                auxiliar_string[index] = "Z"
+            elif type(pauli)==qml.ops.qubit.non_parametric_ops.PauliX:
+                auxiliar_string[index] = "X"
+            elif type(pauli)==qml.ops.qubit.non_parametric_ops.PauliY:
+                auxiliar_string[index] = "Y"
+            else:
+                pass
                 
     else:
         Nonidentical = term.non_identity_obs
@@ -49,6 +66,7 @@ def Pauli_function(term, qubits):
     for s in auxiliar_string:
         string+= s
     return string
+
 
 def conmute_group(pauli):
     pauli_aux = ['1' for i in range(len(pauli))]
@@ -155,7 +173,7 @@ conts_spin = {"0.5": {"1": { '0':1, '1':-1, },
                           '0100':3/4, '0101':1/4, '0110':-1/4, '0111':-3/4,
                           '1000':-3/4, '1001':-1/4, '1010':1/4, '1011':-3/4,
                           '1100':-9/4, '1101':-3/4, '1110':3/4, '1111':9/4}  },
-            "2": {"1": {'000':2, '001':1, '010':0, '011':-1, '100':2},
+            "2": {"1": {'000':2, '001':1, '010':0, '011':-1, '100':-2},
                       },
             "2.5": {"1": {'000':5/2, '001':3/2, '010':1/2, '011':-1/2, '100':-3/2, '101':-5/2},
                       },

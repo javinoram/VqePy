@@ -1,15 +1,23 @@
 method_class : VQE
-simulation_object: Spin
+simulation_object: FermiHubbard
 
 hamiltonian_params:
-    file: h2.xyz
+    #Molecular
+    file: he2.xyz
     mapping: jordan_wigner
     charge: 
     mult:
-    basis:
+    basis: 6-311g
     method:
-    pauli_string: [[ZZI, 1], [IZZ, 1]]
+
+    #Spin
+    pauli_string: [[1, ZZI], [1, IZZ]]
     spin: 0.5
+
+    #FermiHubbard
+    sites: 2
+    hopping: -1.0
+    potential: -2.0
 
 ansatz_params:
     repetitions: 1
@@ -25,14 +33,27 @@ minimizate_method_params:
     type: SLSQP
     maxiter: 100
     tol: 0.000001
-    step_theta: 1.0
+    step_theta: 0.4
     step_x: 0.8
 
-observable_params:
-    observable: Magnetization GS
-    file: OptimumVQESpin.csv
-    lim_sup: 0.0
-    lim_inf: 100
 
-    number_points: 101
-    delta: 0.2
+
+###
+observable_params:
+    observable: Specific heat
+
+    #file -> ground state
+    file: #OptimumParamsVQE.csv
+    qubits: 3
+
+    #state -> estado puro arbitrario
+    #tener en consideracion la representacion
+    #de cada sistema
+    state: "000"
+
+    lim_sup: 0.1
+    lim_inf: 10
+
+    number_points: 21
+    delta: 0.1
+    n: 20
