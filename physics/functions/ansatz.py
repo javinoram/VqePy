@@ -1,5 +1,6 @@
 import pennylane as qml
 from pennylane.templates import ApproxTimeEvolution
+from physics.functions.constans import *
 
 class given_ansatz():
     def circuit(self, theta, obs):
@@ -56,8 +57,10 @@ class given_ansatz():
     def set_node(self, params) -> None:
         self.node = qml.QNode(self.circuit_time, self.device, interface=params['interface'])
         return
+    
 
-    def circuit_time(self, theta, hamiltonian, obs, time):
+    def circuit_time(self, theta, obs, time, n, hamiltonian):
+        '''Ground state'''
         qml.BasisState(self.hf_state, wires=range(self.qubits))
         for i in range(0, self.repetition):
             for j, term in enumerate(self.singles):
@@ -65,10 +68,48 @@ class given_ansatz():
 
             for j, term in enumerate(self.doubles):
                 qml.DoubleExcitation(theta[1][i], wires=term)
-        
-        ApproxTimeEvolution(hamiltonian, time, 3)
-        return qml.probs(wires=obs)
-    
+
+        '''Time evolution'''
+        for _ in range(n):
+            for coeff, term in hamiltonian:
+                if is_identity(term):
+                    pass
+                else:
+                    non_null_index = []
+                    for k in range(len(term)):
+                        if term[k] != 'I':
+                            non_null_index.append(k)
+
+                    '''Initial basis change'''
+                    for k in range(len(non_null_index)):
+                        if term[k] == 'X':
+                            qml.Hadamard(wires=[non_null_index[k]])
+                        elif term[k] == 'Y':
+                            qml.S(wires=[non_null_index[k]])
+                            qml.Hadamard(wires=[non_null_index[k]])
+                        else:
+                            pass
+                    '''Initial CX gates'''
+                    for k in range(len(non_null_index)-1):
+                        qml.CNOT(wires=[non_null_index[k], non_null_index[k+1]])
+
+                    '''Time parameter'''
+                    qml.RZ( (2*time/n)*coeff, non_null_index[-1] )
+
+                    '''Final CX gates'''
+                    for k in range(len(non_null_index)-1):
+                        qml.CNOT(wires=[non_null_index[k], non_null_index[k+1]])
+                    
+                    '''Final basis change'''
+                    for k in range(len(non_null_index)):
+                        if term[k] == 'X':
+                            qml.Hadamard(wires=[non_null_index[k]])
+                        elif term[k] == 'Y':
+                            qml.Hadamard(wires=[non_null_index[k]])
+                            qml.S(wires=[non_null_index[k]])
+                        else:
+                            pass
+        return qml.probs(wires=obs[0]), qml.probs(wires=obs[1])
 
 class spin_ansatz():
     def circuit(self, theta, obs, pauli):

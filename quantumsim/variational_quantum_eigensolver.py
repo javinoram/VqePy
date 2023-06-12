@@ -58,7 +58,8 @@ class variational_quantum_eigensolver_electronic(given_ansatz):
             else:
                 raise Exception("Metodo no valido, considere dhf o pyscf")
 
-        self.hamiltonian_object, self.qubits = qchem.molecular_hamiltonian(
+        
+        aux_h, self.qubits = qchem.molecular_hamiltonian(
             symbols= symbols,
             coordinates= coordinates/2,
             mapping= self.mapping,
@@ -66,6 +67,46 @@ class variational_quantum_eigensolver_electronic(given_ansatz):
             mult= self.mult,
             basis= self.basis,
             method= self.method)
+        
+        coeff, expression = aux_h.terms()
+        Pauli_terms = []
+
+        for k, term in enumerate(expression):
+            auxiliar_string = ["I" for _ in range(self.qubits)]
+
+            if type(term)==qml.ops.qubit.non_parametric_ops.PauliZ:
+                index = term.wires[0]
+                auxiliar_string[index] = "Z"
+            
+            elif type(term)==qml.ops.qubit.non_parametric_ops.PauliX:
+                index = term.wires[0]
+                auxiliar_string[index] = "X"
+            
+            elif type(term)==qml.ops.qubit.non_parametric_ops.PauliY:
+                index = term.wires[0]
+                auxiliar_string[index] = "Y"
+
+            elif type(term)==qml.ops.identity.Identity:
+                pass
+            
+            else:
+                Nonidentical = term.non_identity_obs
+                for pauli in Nonidentical:
+                    index = pauli.wires[0]
+                    if type(pauli)==qml.ops.qubit.non_parametric_ops.PauliZ:
+                        auxiliar_string[index] = "Z"
+                    elif type(pauli)==qml.ops.qubit.non_parametric_ops.PauliX:
+                        auxiliar_string[index] = "X"
+                    elif type(pauli)==qml.ops.qubit.non_parametric_ops.PauliY:
+                        auxiliar_string[index] = "Y"
+                    else:
+                        pass
+            string = ""
+            for s in auxiliar_string:
+                string+= s
+            Pauli_terms.append([coeff[k],string])
+        self.hamiltonian_object = Pauli_terms
+        del aux_h, coeff, expression
         return
     
     '''
@@ -77,7 +118,17 @@ class variational_quantum_eigensolver_electronic(given_ansatz):
     '''
     def cost_function(self, theta):
         params = [theta[:self.repetition], theta[self.repetition:]]
-        result = self.node(theta = params, obs = self.hamiltonian_object)
+        result = 0.0
+        for coeff, term in self.hamiltonian_object:
+            aux = coeff
+            aux.requires_grad = True
+            
+            if is_identity(term):
+                result += aux
+            else:
+                result_probs = self.node(theta = params, obs = term)
+                for i in range(len(result_probs)):
+                    result += aux*result_probs[i]*parity(i)
         return result
 
 
@@ -131,8 +182,11 @@ class variational_quantum_eigensolver_spin(spin_ansatz):
 
 '''
     1D Hubbard model, lineal
+    Cada sitio es modelado usando dos qubits.
+    Estos son ordenados agrupandolos segun el espin del sitio
+    [sitios de espin up]_n [sitios de espin down]_n
 '''
-class variational_quantum_eigensolver_hubbard(given_ansatz):
+class variational_quantum_eigensolver_fermihubbard(given_fermihubbard_ansazt):
     hamiltonian_object= None
 
     hopping_index = []
@@ -140,18 +194,24 @@ class variational_quantum_eigensolver_hubbard(given_ansatz):
 
     potential_index = []
     potential = 0.0
-
-    qubits = 0
     
     def __init__(self, params):
-        self.qubits = params["Sites"]*2
+        self.qubits = params["sites"]*2
         self.hamiltonian_object = None
-        self.hopping = params["Hopping"]
-        self.potential = params["Potential"]
-        for i in range( params["Sites"] ):
-            index = [ params["Sites"]*i,  params["Sites"]*i+1]
+        self.hopping = params["hopping"]
+        self.potential = params["potential"]
+        for i in range( params["sites"] ):
+            index = [ i,  params["sites"] + i]
             self.potential_index.append(index)
 
+        for i in range( params["sites"]-1 ):
+            index1 = [ i,  i+1 ]
+            index2 = [ params["sites"]+i,  params["sites"]+ i+1 ]
+            self.hopping_index.append(index1)
+            self.hopping_index.append(index2)
+
+        print(self.hopping_index)
+        print(self.potential_index)
         return
     
     '''
@@ -163,5 +223,18 @@ class variational_quantum_eigensolver_hubbard(given_ansatz):
     '''
     def cost_function(self, theta):
         params = [theta[:self.repetition], theta[self.repetition:]]
-        result = self.node(theta = params, obs = self.hamiltonian_object)
+        result = 0.0
+        #Onsite interaccion
+        for term in self.potential_index:
+            result_aux = self.node(theta = params, obs = term, type='U', pauli="I")
+            result+= -self.potential*result_aux[3]
+        #result = self.node(theta = params, obs = self.hamiltonian_object)
+        
+        #Hopping interaction
+        for term in self.hopping_index:
+            result_X = self.node(theta = params, obs = term, type='t', pauli="X")
+            result_Y = self.node(theta = params, obs = term, type='t', pauli="Y")
+
+            result+= -self.hopping*(result_X[0]+result_X[3]-result_X[1]-result_X[2])
+            result+= -self.hopping*(result_Y[0]+result_Y[3]-result_Y[1]-result_Y[2])
         return result

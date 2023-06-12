@@ -1,15 +1,23 @@
 method_class : VQE
-simulation_object: Spin
+simulation_object: Electronic
 
 hamiltonian_params:
+    #Molecular
     file: h2.xyz
     mapping: jordan_wigner
     charge: 
     mult:
     basis:
     method:
+
+    #Spin
     pauli_string: [[ZZI, 1], [IZZ, 1]]
     spin: 0.5
+
+    #FermiHubbard
+    sites: 2
+    hopping: -1.0
+    potential: -2.0
 
 ansatz_params:
     repetitions: 1
@@ -20,19 +28,20 @@ ansatz_params:
     shots: 1000.0
     token: 
 
-minimizate_method: Scipy
+minimizate_method: Gradient
 minimizate_method_params:
     type: SLSQP
     maxiter: 100
     tol: 0.000001
-    step_theta: 1.0
+    step_theta: 0.4
     step_x: 0.8
 
 observable_params:
-    observable: Magnetization GS
-    file: OptimumVQESpin.csv
+    observable: Density charge
+    file: OptimumVQEElectronic.csv
     lim_sup: 0.0
     lim_inf: 100
 
-    number_points: 101
+    number_points: 201
     delta: 0.2
+    n: 7

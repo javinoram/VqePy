@@ -1,4 +1,5 @@
 from physics.functions.ansatz import *
+from physics.functions.constans import *
 from pennylane import qchem
 import math
 
@@ -49,7 +50,7 @@ class electronic_hamiltonian(given_ansatz):
             else:
                 raise Exception("Metodo no valido, considere dhf o pyscf")
 
-        self.hamiltonian_object, self.qubits = qchem.molecular_hamiltonian(
+        aux_h, self.qubits = qchem.molecular_hamiltonian(
             symbols= symbols,
             coordinates= coordinates/2,
             mapping= self.mapping,
@@ -57,26 +58,66 @@ class electronic_hamiltonian(given_ansatz):
             mult= self.mult,
             basis= self.basis,
             method= self.method)
-        self.hamiltonian_object = self.hamiltonian_object
+        
+        coeff, expression = aux_h.terms()
+        Pauli_terms = []
+
+        for k, term in enumerate(expression):
+            auxiliar_string = ["I" for _ in range(self.qubits)]
+
+            if type(term)==qml.ops.qubit.non_parametric_ops.PauliZ:
+                index = term.wires[0]
+                auxiliar_string[index] = "Z"
+            
+            elif type(term)==qml.ops.qubit.non_parametric_ops.PauliX:
+                index = term.wires[0]
+                auxiliar_string[index] = "X"
+            
+            elif type(term)==qml.ops.qubit.non_parametric_ops.PauliY:
+                index = term.wires[0]
+                auxiliar_string[index] = "Y"
+
+            elif type(term)==qml.ops.identity.Identity:
+                pass
+            
+            else:
+                Nonidentical = term.non_identity_obs
+                for pauli in Nonidentical:
+                    index = pauli.wires[0]
+                    if type(pauli)==qml.ops.qubit.non_parametric_ops.PauliZ:
+                        auxiliar_string[index] = "Z"
+                    elif type(pauli)==qml.ops.qubit.non_parametric_ops.PauliX:
+                        auxiliar_string[index] = "X"
+                    elif type(pauli)==qml.ops.qubit.non_parametric_ops.PauliY:
+                        auxiliar_string[index] = "Y"
+                    else:
+                        pass
+
+            string = ""
+            for s in auxiliar_string:
+                string+= s
+            Pauli_terms.append([coeff[k],string])
+        self.hamiltonian_object = Pauli_terms
+
+        del aux_h, coeff, expression
         return
     
-    def density_charge(self, theta, time):
+    #def circuit_time(self, theta, obs, time, n, hamiltonian):
+    def density_charge(self, theta, time, n):
         number_pairs = int( self.qubits/2 )
         params = [theta[:self.repetition], theta[self.repetition:]]
         value_per_sites = []
         for i in range(number_pairs):
-            result_down = self.node(theta = params, hamiltonian=self.hamiltonian_object, obs =[2*i], time=time)
-            result_up = self.node(theta = params, hamiltonian=self.hamiltonian_object, obs =[2*i+1], time=time)
+            result_down, result_up = self.node(theta = params, obs = [2*i, 2*i+1], time= time, n=n, hamiltonian=self.hamiltonian_object)
             value_per_sites.append(result_up[1] + result_down[1])
         return value_per_sites
     
 
-    def density_spin(self, theta, time):
+    def density_spin(self, theta, time, n):
         number_pairs = int( self.qubits/2 )
         params = [theta[:self.repetition], theta[self.repetition:]]
         value_per_sites = []
         for i in range(number_pairs):
-            result_down = self.node(theta = params, hamiltonian=self.hamiltonian_object, obs =[2*i], time=time)
-            result_up = self.node(theta = params, hamiltonian=self.hamiltonian_object, obs =[2*i+1], time=time)
+            result_down, result_up = self.node(theta = params, obs = [2*i, 2*i+1], time= time, n=n, hamiltonian=self.hamiltonian_object)
             value_per_sites.append(result_up[1] - result_down[1])
         return value_per_sites

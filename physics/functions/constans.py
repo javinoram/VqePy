@@ -11,6 +11,12 @@ def parity(integer):
         return 1
     else:
         return -1
+    
+def is_identity(term):
+    for i in range(len(term)):
+        if term[i]!='I':
+            return False
+    return True
 
 def calculate_entropy(distribution):
     total_entropy = 0

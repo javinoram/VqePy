@@ -38,7 +38,7 @@ class given_ansatz():
             else:
                 raise Exception("Backend no encontrado")
             
-            self.device= qml.device(self.base, backend=self.backend, wires=self.qubits*self)
+            self.device= qml.device(self.base, backend=self.backend, wires=self.qubits)
         ##Simuladores de pennylane
         else:
             self.device= qml.device(self.base, wires=self.qubits)
@@ -62,7 +62,100 @@ class given_ansatz():
 
             for j, term in enumerate(self.doubles):
                 qml.DoubleExcitation(theta[1][i], wires=term)
-        return qml.expval(obs)
+
+        to_measure = []
+        for i, string in enumerate(obs):
+            if string == 'X':
+                qml.Hadamard(wires=[i])
+                to_measure.append(i)
+            elif string == 'Y':
+                qml.S(wires=[i])
+                qml.Hadamard(wires=[i])
+                to_measure.append(i)
+            elif string == 'Z':
+                to_measure.append(i)
+            else:
+                pass
+        return qml.probs(wires=to_measure)
+    
+
+
+class given_fermihubbard_ansazt():
+    def circuit(self, theta, obs, type):
+        pass
+
+    base = ""
+    backend = ""
+    token = ""
+
+    device= qml.device("default.qubit", wires=0)
+    node = qml.QNode(circuit, device, interface="autograd")
+    qubits = 0
+    singles=  []
+    doubles= []
+    repetition = 0
+    hf_state = None
+
+    def set_device(self, params) -> None:
+        self.base = params['base']
+
+        ##Maquinas reales
+        if self.base == 'qiskit.ibmq':
+            if params['backend']:
+                self.backend = params['backend']
+            else:
+                raise Exception("Backend no encontrado")
+            if params['token']:
+                self.token = params['token']
+                self.device= qml.device(self.base, backend=self.backend, 
+                    wires=self.qubits,  ibmqx_token= self.token)
+            else:
+                raise Exception("Token de acceso no encontrado")
+        ##Simuladores de qiskit
+        elif self.base == "qiskit.aer":
+            if params['backend']:
+                self.backend = params['backend']
+            else:
+                raise Exception("Backend no encontrado")
+            
+            self.device= qml.device(self.base, backend=self.backend, wires=self.qubits)
+        ##Simuladores de pennylane
+        else:
+            self.device= qml.device(self.base, wires=self.qubits)
+        return
+
+    def set_hiperparams_circuit(self, params) -> None:
+        self.repetition = params['repetitions']
+        self.hf_state = qml.qchem.hf_state(params['electrons'], self.qubits)
+        self.singles, self.doubles = qml.qchem.excitations(params['electrons'], self.qubits)
+        return
+    
+    def set_node(self, params) -> None:
+        self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
+        return
+
+    def circuit(self, theta, obs, type, pauli):
+        qml.BasisState(self.hf_state, wires=range(self.qubits))
+        for i in range(0, self.repetition):
+            for j, term in enumerate(self.singles):
+                qml.SingleExcitation(theta[0][i], wires=term)
+
+            for j, term in enumerate(self.doubles):
+                qml.DoubleExcitation(theta[1][i], wires=term)
+
+        if type == 'U':
+            return qml.probs(wires=obs)
+        
+        else:
+            if 'X' in pauli:
+                for i in obs:
+                    qml.Hadamard(wires=i)
+            if 'Y' in pauli:
+                for i in obs:
+                    qml.S(wires=i)
+                    qml.Hadamard(wires=i)
+
+            return qml.probs(wires=obs)
     
 
 class spin_ansatz():
@@ -159,7 +252,6 @@ class spin_ansatz():
                     qml.S(wires=[self.correction*i+j])
                     qml.Hadamard(wires=[self.correction*i+j])
         return qml.probs(wires=aux)
-    
     
 
 class spin05_ansatz():

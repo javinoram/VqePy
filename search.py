@@ -56,8 +56,16 @@ if params["method_class"] == "VQE":
         number = (object_vqe.qubits)*rep
         theta = np.array( [np.random.randint(314)/100.0  for _ in range(number)], requires_grad=True)
     
-    elif params["simulation_object"]=="Hubbard":
-        pass
+    elif params["simulation_object"]=="FermiHubbard":
+        object_vqe = variational_quantum_eigensolver_fermihubbard(params["hamiltonian_params"])
+        object_vqe.set_device(params["ansatz_params"])
+        object_vqe.set_hiperparams_circuit(params["ansatz_params"])
+        object_vqe.set_node(params["ansatz_params"])
+
+        rep = params["ansatz_params"]["repetitions"]
+        number = 2*rep
+        theta = np.array( [np.random.randint(314)/100.0  for _ in range(number)], requires_grad=True)
+    
     else:
         raise Exception("Error en el tipo de Hamiltoniano")
 
