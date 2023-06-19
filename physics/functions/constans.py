@@ -1,6 +1,58 @@
 from pennylane import numpy as np
 import pandas as pd
 
+def conmute_group(pauli):
+    pauli_aux = ['1' for i in range(len(pauli))]
+    group_final = []
+
+    for i in range(0, len(pauli_aux)):
+
+        if pauli_aux[i] != '':
+            aux = [ pauli[i] ]
+            pauli_aux[i] = ''
+
+            for j in range(len(pauli_aux)):
+                if pauli_aux[j] != '':
+
+                    auxm2 = pauli[j]
+                    if conmute(aux, auxm2) and auxm2 not in aux and same_lenght(aux, auxm2):
+                        aux.append(auxm2)
+                        pauli_aux[j] = ""
+
+            group_final.append(aux)
+    return group_final
+
+def same_lenght(list_terms, op):
+    aux = 0
+    for i in op[1]:
+        if i != 'I':
+            aux+=1
+    for term in list_terms:
+        aux_term = 0
+        for i in term[1]:
+            if i != 'I':
+                aux_term+=1
+        if aux_term !=aux:
+            return False
+    return True
+
+
+def conmute(listm, m):
+    m2 = m[1]
+    for term in listm:
+        s = term[1]
+        for i in range(len(s)):
+            if s[i] == 'Z':
+                if m2[i] == 'X' or m2[i] == 'Y':
+                    return False
+            elif s[i] == 'X':
+                if m2[i] == 'Y' or m2[i] == 'Z':
+                    return False                
+            elif s[i] == 'Y':
+                if m2[i] == 'X' or m2[i] == 'Z':
+                    return False
+    return True
+
 def parity(integer):
     binary = format(integer, 'b')
     aux = 0
@@ -17,6 +69,15 @@ def is_identity(term):
         if term[i]!='I':
             return False
     return True
+
+def finite_diff(f, x, delta=0.01):
+        gradient = []
+        for i in range(len(x)):
+            shift = np.zeros_like(x)
+            shift[i] += 0.5 * delta
+            res = (f(x + shift) - f(x - shift)) * delta**-1
+            gradient.append(res)
+        return gradient
 
 def calculate_entropy(distribution):
     total_entropy = 0

@@ -5,16 +5,10 @@ import math
 
 '''
 Clases que representan implementaciones del metodo variational quantum eigensolver (VQE).
-
-Cada clase representa un tipo concreto de hamiltoniano en el que puede aplicar VQE,
-dentro de cada uno estan los metodos necesarios para poder contruir el paso de optimizacion.
-(hamiltoniano, ansatz y funcion de coste)
 '''
 
 class variational_quantum_eigensolver_electronic(given_ansatz):
     hamiltonian_object= None
-    symbols = None
-    coordinates = None
     mapping= 'jordan_wigner'
     charge= 0
     mult= 1
@@ -22,8 +16,8 @@ class variational_quantum_eigensolver_electronic(given_ansatz):
     method='dhf'
 
     '''
-    Iniciador de la clase que construye el hamiltoniano molecular, todas las variables
-    son guardadas en la clase
+    Iniciador de la clase que construye el hamiltoniano molecular y lo almacena en
+    la representación Pauli String.
     input:
         symbols: list [string]
         coordinates: list [float]
@@ -32,8 +26,6 @@ class variational_quantum_eigensolver_electronic(given_ansatz):
         result: none
     '''
     def __init__(self, symbols, coordinates, params= None):
-        self.symbols = symbols
-        self.coordinates = coordinates
         if params['mapping']:
             if params['mapping'] in ("jordan_wigner", "bravyi_kitaev"):
                 self.mapping = params['mapping']
@@ -105,30 +97,35 @@ class variational_quantum_eigensolver_electronic(given_ansatz):
             for s in auxiliar_string:
                 string+= s
             Pauli_terms.append([coeff[k],string])
-        self.hamiltonian_object = Pauli_terms
-        del aux_h, coeff, expression
+
+        self.hamiltonian_object = conmute_group(Pauli_terms)
+        del aux_h, coeff, expression, Pauli_terms
         return
     
     '''
-    Funcion de coste: Funcion de coste que utiliza la funcion de valor esperado de qml
+    Funcion de coste:
     input:
-        theta: list [float]
+        theta: Lista de parametros ([float])
     return:
-        result: float
+        result: Valor esperado (float)
     '''
     def cost_function(self, theta):
         params = [theta[:self.repetition], theta[self.repetition:]]
         result = 0.0
-        for coeff, term in self.hamiltonian_object:
-            aux = coeff
-            aux.requires_grad = True
-            
-            if is_identity(term):
-                result += aux
+
+        #Iteracion sobre grupos conmutantes
+        for group in self.hamiltonian_object:
+            if is_identity(group[0][1]):
+                exchange = group[0][0]
+                exchange.requires_grad = True
+                result += exchange
             else:
-                result_probs = self.node(theta = params, obs = term)
-                for i in range(len(result_probs)):
-                    result += aux*result_probs[i]*parity(i)
+                result_probs = self.node(theta = params, obs = group)
+                for k, probs in enumerate(result_probs):
+                    exchange = group[k][0]
+                    exchange.requires_grad = True
+                    for j in range(len(probs)):
+                        result += exchange*probs[j]*parity(j)
         return result
 
 
@@ -137,27 +134,18 @@ class variational_quantum_eigensolver_spin(spin_ansatz):
     hamiltonian_index = []
 
     '''
-    Iniciador de la clase que construye la matriz de indices, todas las variables
-    son guardadas en la clase
+    Iniciador de la clase que construye el hamiltoniano de espines y lo almacena en
+    la representación Pauli String.
     input:
         params: dict
     return:
         result: none
     '''
     def __init__(self, params):
-        self.qubits = len(params['pauli_string'][0][0])
+        self.qubits = len(params['pauli_string'][0][1])
         self.spin = params['spin']
         self.correction = math.ceil( (int( 2*self.spin+1 ))/2  )
-        for term in params['pauli_string']:
-            aux = []
-            for i, string in enumerate(term[0]):
-                if string != 'I': aux.append(i)
-            
-            if len(aux) != 2:
-                raise Exception("Terminos del hamiltoniano tienen mas de 2 interacciones")
-            
-            self.hamiltonian_index.append(aux)
-        self.hamiltonian_object = params['pauli_string']
+        self.hamiltonian_object = conmute_group(params['pauli_string'])
         return
     
 
@@ -169,14 +157,13 @@ class variational_quantum_eigensolver_spin(spin_ansatz):
         result: float
     '''
     def cost_function(self, theta):
-        ansatz = theta
         result= 0.0
-        for i, term in enumerate(self.hamiltonian_index):
-            result_term = self.node( theta=ansatz, obs= term, pauli= self.hamiltonian_object[i][0])
-            exchange = self.hamiltonian_object[i][1]
-            for s in conts_spin[str(self.spin)]["2"]:
-                index = int(s, 2)
-                result += exchange*result_term[index]
+        for group in self.hamiltonian_object:
+            result_probs = self.node( theta=theta, obs=group)
+            for k, probs in enumerate(result_probs):
+                    aux = group[k][0]
+                    for j in range(len(probs)):
+                        result += aux*probs[j]*parity(j)
         return result
     
 
@@ -209,9 +196,6 @@ class variational_quantum_eigensolver_fermihubbard(given_fermihubbard_ansazt):
             index2 = [ params["sites"]+i,  params["sites"]+ i+1 ]
             self.hopping_index.append(index1)
             self.hopping_index.append(index2)
-
-        print(self.hopping_index)
-        print(self.potential_index)
         return
     
     '''
@@ -228,13 +212,12 @@ class variational_quantum_eigensolver_fermihubbard(given_fermihubbard_ansazt):
         for term in self.potential_index:
             result_aux = self.node(theta = params, obs = term, type='U', pauli="I")
             result+= -self.potential*result_aux[3]
-        #result = self.node(theta = params, obs = self.hamiltonian_object)
         
         #Hopping interaction
         for term in self.hopping_index:
             result_X = self.node(theta = params, obs = term, type='t', pauli="X")
             result_Y = self.node(theta = params, obs = term, type='t', pauli="Y")
 
-            result+= -self.hopping*(result_X[0]+result_X[3]-result_X[1]-result_X[2])
-            result+= -self.hopping*(result_Y[0]+result_Y[3]-result_Y[1]-result_Y[2])
+            result+= self.hopping*(result_X[0]+result_X[3]-result_X[1]-result_X[2])
+            result+= self.hopping*(result_Y[0]+result_Y[3]-result_Y[1]-result_Y[2])
         return result

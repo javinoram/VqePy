@@ -2,22 +2,12 @@ method_class : VQE
 simulation_object: Spin
 
 hamiltonian_params:
-    #Molecular
     file: he2.xyz
     mapping: jordan_wigner
     charge: 
     mult:
-    basis: 6-311g
+    basis: 
     method:
-
-    #Spin
-    pauli_string: [[1, ZZI], [1, IZZ]]
-    spin: 0.5
-
-    #FermiHubbard
-    sites: 2
-    hopping: -1.0
-    potential: -2.0
 
 ansatz_params:
     repetitions: 1
@@ -37,10 +27,8 @@ minimizate_method_params:
     step_x: 0.8
 
 
-
-###
 observable_params:
-    observable: Specific heat
+    observable: Density charge
 
     #file -> ground state
     file: #OptimumParamsVQE.csv

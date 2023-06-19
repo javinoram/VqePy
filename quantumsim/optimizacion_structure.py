@@ -43,7 +43,7 @@ class optimization_structure(given_ansatz):
             else:
                 raise Exception("Metodo no valido, considere dhf o pyscf")
 
-        aux_h, self.qubits = qchem.molecular_hamiltonian(
+        _, self.qubits = qchem.molecular_hamiltonian(
             symbols= symbols,
             coordinates= coordinates/2,
             mapping= self.mapping,
@@ -52,7 +52,149 @@ class optimization_structure(given_ansatz):
             basis= self.basis,
             method= self.method)
         
-        coeff, expression = aux_h.terms()
+        #coeff, expression = aux_h.terms()
+        #Pauli_terms = []
+
+        #for k, term in enumerate(expression):
+        #    auxiliar_string =[]
+        #    if type(term)==qml.ops.qubit.non_parametric_ops.PauliZ:
+        #        index = term.wires[0]
+        #        for j in range(self.qubits):
+        #            if j== index:
+        #                auxiliar_string.append("Z")
+        #            else:
+        #                auxiliar_string.append("I")
+            
+        #    elif type(term)==qml.ops.qubit.non_parametric_ops.PauliX:
+        #        index = term.wires[0]
+        #        for j in range(self.qubits):
+        #            if j== index:
+        #                auxiliar_string.append("X")
+        #            else:
+        #                auxiliar_string.append("I")
+            
+        #    elif type(term)==qml.ops.qubit.non_parametric_ops.PauliY:
+        #        index = term.wires[0]
+        #        for j in range(self.qubits):
+        #            if j== index:
+        #                auxiliar_string.append("Y")
+        #            else:
+        #                auxiliar_string.append("I")
+
+        #    elif type(term)==qml.ops.identity.Identity:
+        #        for j in range(self.qubits):
+        #            auxiliar_string.append("I")
+        #    else:
+        #        Nonidentical = term.non_identity_obs
+        #        auxiliar_string = ["I" for _ in range(self.qubits)]
+        #        for pauli in Nonidentical:
+        #            index = pauli.wires[0]
+        #            if type(pauli)==qml.ops.qubit.non_parametric_ops.PauliZ:
+        #                auxiliar_string[index] = "Z"
+        #            elif type(pauli)==qml.ops.qubit.non_parametric_ops.PauliX:
+        #                auxiliar_string[index] = "X"
+        #            elif type(pauli)==qml.ops.qubit.non_parametric_ops.PauliY:
+        #                auxiliar_string[index] = "Y"
+        #            else:
+        #                pass
+        #    string = ""
+        #    for s in auxiliar_string:
+        #        string+= s
+        #    Pauli_terms.append([coeff[k], string])
+        #self.hamiltonian_object = conmute_group(Pauli_terms)
+        #del aux_h, coeff, expression
+        return
+
+    def grad_x(self, theta, x):
+        params = [theta[:len(self.singles)*self.repetition], theta[len(self.singles)*self.repetition:]]
+        grad = []
+        delta = 0.01
+
+        for i in range(len(x)):
+            shift = np.zeros_like(x)
+            shift[i] += 0.5 * delta
+
+            coeff, expression = ((self.H(x + shift) - self.H(x - shift)) * delta**-1).terms()
+            Pauli_terms = []
+
+            for k, term in enumerate(expression):
+                auxiliar_string =[]
+                if type(term)==qml.ops.qubit.non_parametric_ops.PauliZ:
+                    index = term.wires[0]
+                    for j in range(self.qubits):
+                        if j== index:
+                            auxiliar_string.append("Z")
+                        else:
+                            auxiliar_string.append("I")
+                
+                elif type(term)==qml.ops.qubit.non_parametric_ops.PauliX:
+                    index = term.wires[0]
+                    for j in range(self.qubits):
+                        if j== index:
+                            auxiliar_string.append("X")
+                        else:
+                            auxiliar_string.append("I")
+                
+                elif type(term)==qml.ops.qubit.non_parametric_ops.PauliY:
+                    index = term.wires[0]
+                    for j in range(self.qubits):
+                        if j== index:
+                            auxiliar_string.append("Y")
+                        else:
+                            auxiliar_string.append("I")
+
+                elif type(term)==qml.ops.identity.Identity:
+                    for j in range(self.qubits):
+                        auxiliar_string.append("I")
+                
+                else:
+                    Nonidentical = term.non_identity_obs
+                    auxiliar_string = ["I" for _ in range(self.qubits)]
+                    for pauli in Nonidentical:
+                        index = pauli.wires[0]
+                        if type(pauli)==qml.ops.qubit.non_parametric_ops.PauliZ:
+                            auxiliar_string[index] = "Z"
+                        elif type(pauli)==qml.ops.qubit.non_parametric_ops.PauliX:
+                            auxiliar_string[index] = "X"
+                        elif type(pauli)==qml.ops.qubit.non_parametric_ops.PauliY:
+                            auxiliar_string[index] = "Y"
+                        else:
+                            pass
+                string = ""
+                for s in auxiliar_string:
+                    string+= s
+                Pauli_terms.append([coeff[k], string])
+            groups = conmute_group(Pauli_terms)
+            
+            result = 0.0
+            for j, group in enumerate(groups):
+                if is_identity(group[0][1]):
+                    aux = group[0][0]
+                    aux.requires_grad = True
+                    result += aux
+                        
+                else:
+                    result_probs = self.node(theta = params, obs = [g[1] for g in group])
+                    for k, probs in enumerate(result_probs):
+                        aux = group[k][0]
+                        aux.requires_grad = True
+
+                        result_aux = 0.0
+                        for j in range(len(probs)):
+                            result_aux += probs[j]*parity(j)
+                        result += result_aux*aux
+                
+            grad.append( result )
+        return np.array(grad)
+    
+    #Retorna los coeficientes
+    def H(self, x):
+        return qml.qchem.molecular_hamiltonian(self.symbols, x, mult= self.mult, charge=self.charge)[0]
+    
+    def cost_function(self, theta, x):
+        params = [theta[:len(self.singles)*self.repetition], theta[len(self.singles)*self.repetition:]]
+        
+        coeff, expression = self.H(x).terms()
         Pauli_terms = []
 
         for k, term in enumerate(expression):
@@ -101,50 +243,23 @@ class optimization_structure(given_ansatz):
             string = ""
             for s in auxiliar_string:
                 string+= s
-            Pauli_terms.append(string)
-        self.hamiltonian_object = Pauli_terms
-        del aux_h, coeff, expression
-        return
+            Pauli_terms.append([coeff[k], string])
+        groups = conmute_group(Pauli_terms)
 
-    def grad_x(self, theta, x):
-        params = [theta[:len(self.singles)*self.repetition], theta[len(self.singles)*self.repetition:]]
-        grad = []
-        delta = 0.01
-
-        exp_vals = []
-        for term in self.hamiltonian_object:
-            if is_identity(term):
-                exp_vals.append(1)
-            else:
-                result_probs = self.node(theta = params, obs = term)
-                result_aux = 0.0
-                for i in range(len(result_probs)):
-                    result_aux += result_probs[i]*parity(i)
-                exp_vals.append(result_aux)
-
-        for i in range(len(x)):
-            shift = np.zeros_like(x)
-            shift[i] += 0.5 * delta
-            res = (self.H(x + shift) - self.H(x - shift)) * delta**-1
-            grad.append( sum(np.array(exp_vals)*res) )
-        return np.array(grad)
-    
-    #Retorna los coeficientes
-    def H(self, x):
-        return qml.qchem.molecular_hamiltonian(self.symbols, x, mult= self.mult, charge=self.charge)[0].terms()[0]
-    
-    def cost_function(self, theta, x):
-        params = [theta[:len(self.singles)*self.repetition], theta[len(self.singles)*self.repetition:]]
-        
-        coeff = self.H(x)
         result = 0.0
-        for k, term in enumerate(self.hamiltonian_object):
-            aux = coeff[k]
-            aux.requires_grad = True
-            if is_identity(term):
+        for k, group in enumerate(groups):
+            if is_identity(group[0][1]):
+                aux = group[0][0]
+                aux.requires_grad = True
                 result += aux
             else:
-                result_probs = self.node(theta = params, obs = term)
-                for i in range(len(result_probs)):
-                    result += aux*result_probs[i]*parity(i)
+                result_probs = self.node(theta = params, obs = [g[1] for g in group])
+                for i, probs in enumerate(result_probs):
+                    aux = group[i][0]
+                    aux.requires_grad = True
+
+                    aux_result = 0.0
+                    for j in range(len(probs)):
+                        aux_result += probs[j]*parity(j)
+                    result += aux_result*aux
         return result
