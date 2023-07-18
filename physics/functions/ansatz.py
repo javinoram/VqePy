@@ -329,3 +329,170 @@ class spin_ansatz():
                     pass
             to_measure.append(aux)
         return [qml.probs(wires=to) for to in to_measure ]
+    
+
+
+
+'''
+Given ansatz adaptado para trabajar en el modelo FermiHubbard
+'''
+class given_fermihubbard_ansazt():
+    def circuit(self, theta, obs, type):
+        pass
+
+    base = ""
+    backend = ""
+    token = ""
+
+    device= qml.device("default.qubit", wires=0)
+    node = qml.QNode(circuit, device, interface="autograd")
+    qubits = 0
+    singles=  []
+    doubles= []
+    repetition = 0
+    hf_state = []
+    state = []
+
+    def set_device(self, params) -> None:
+        self.base = params['base']
+
+        ##Maquinas reales
+        if self.base == 'qiskit.ibmq':
+            if params['backend']:
+                self.backend = params['backend']
+            else:
+                raise Exception("Backend no encontrado")
+            if params['token']:
+                self.token = params['token']
+                self.device= qml.device(self.base, backend=self.backend, 
+                    wires=self.qubits,  ibmqx_token= self.token)
+            else:
+                raise Exception("Token de acceso no encontrado")
+        ##Simuladores de qiskit
+        elif self.base == "qiskit.aer":
+            if params['backend']:
+                self.backend = params['backend']
+            else:
+                raise Exception("Backend no encontrado")
+            
+            self.device= qml.device(self.base, backend=self.backend, wires=self.qubits)
+        ##Simuladores de pennylane
+        else:
+            self.device= qml.device(self.base, wires=self.qubits)
+        return
+
+    def set_hiperparams_circuit(self, params) -> None:
+        self.repetition = params['repetitions']
+
+        #Estado base
+        up_array = [0 for _ in range( int(self.qubits/2) )]
+        down_array = [0 for _ in range( int(self.qubits/2) )]
+        elec = params['electrons']
+        upper_index = 0
+        lower_index = 0
+        for i in range(len(up_array)):
+            if elec >0:
+                up_array[upper_index] =  1
+                upper_index += 1
+                elec -= 1 
+
+            if elec >0:
+                down_array[lower_index] =  1
+                lower_index += 1
+                elec -= 1
+
+            if elec <= 0:
+                break 
+
+        self.hf_state = np.concatenate((up_array, down_array), axis=0)
+
+        singles = []
+        doubles = []
+        for i in range(len(up_array)):
+            if up_array[i] == 1:
+                for j in range(i, len(up_array)):
+                    if up_array[j] == 0:
+                        singles.append([i,j])
+
+            if down_array[i] == 1:
+                for j in range(i, len(down_array)):
+                    if down_array[j] == 0:
+                        singles.append([i+len(down_array),j+len(down_array)])
+            
+            if up_array[i] == 1 and down_array[i] == 1:
+                for j in range(i, len(down_array)):
+                    if up_array[j] == 0 and down_array[j] == 0:
+                        doubles.append([i, i+ len(down_array),j, j+len(down_array)])
+
+        self.singles = singles
+        self.doubles = doubles
+        return
+    
+    def set_node(self, params) -> None:
+        self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
+        return
+    
+    def set_state(self, state) -> None:
+        aux = []
+        for i in range(len(state)):
+            if state[i] == '1':
+                aux.append(1)
+            else:
+                aux.append(0)
+        self.state = aux
+        return
+
+    def circuit_time(self, theta, obs, time, n, hamiltonian):
+        '''Ground state'''
+        if len(self.hf_state) != 0:
+            qml.BasisState(self.hf_state, wires=range(self.qubits))
+            for i in range(0, self.repetition):
+                for j, term in enumerate(self.singles):
+                    qml.SingleExcitation(theta[0][i], wires=term)
+
+                for j, term in enumerate(self.doubles):
+                    qml.DoubleExcitation(theta[1][i], wires=term)
+        else:
+            qml.BasisState(self.state, wires=range(self.qubits))
+
+        '''Time evolution'''
+        for _ in range(n):
+            for coeff, term in hamiltonian:
+                if is_identity(term):
+                    pass
+                else:
+                    non_null_index = []
+                    for k in range(len(term)):
+                        if term[k] != 'I':
+                            non_null_index.append(k)
+
+                    '''Initial basis change'''
+                    for k in range(len(non_null_index)):
+                        if term[k] == 'X':
+                            qml.Hadamard(wires=[non_null_index[k]])
+                        elif term[k] == 'Y':
+                            qml.S(wires=[non_null_index[k]])
+                            qml.Hadamard(wires=[non_null_index[k]])
+                        else:
+                            pass
+                    '''Initial CX gates'''
+                    for k in range(len(non_null_index)-1):
+                        qml.CNOT(wires=[non_null_index[k], non_null_index[k+1]])
+
+                    '''Time parameter'''
+                    qml.RZ( (2*time/n)*coeff, non_null_index[-1] )
+
+                    '''Final CX gates'''
+                    for k in range(len(non_null_index)-1):
+                        qml.CNOT(wires=[non_null_index[k], non_null_index[k+1]])
+                    
+                    '''Final basis change'''
+                    for k in range(len(non_null_index)):
+                        if term[k] == 'X':
+                            qml.Hadamard(wires=[non_null_index[k]])
+                        elif term[k] == 'Y':
+                            qml.Hadamard(wires=[non_null_index[k]])
+                            qml.S(wires=[non_null_index[k]])
+                        else:
+                            pass
+        return qml.probs(wires=obs[0]), qml.probs(wires=obs[1])

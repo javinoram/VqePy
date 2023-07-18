@@ -1,6 +1,6 @@
 from quantumsim.functions.ansatz import *
 from quantumsim.functions.min_methods import *
-from quantumsim.functions.constans import *
+from quantumsim.functions.funciones import *
 from quantumsim.optimizacion_structure import *
 from quantumsim.variational_quantum_eigensolver import *
 
@@ -40,7 +40,6 @@ if params["method_class"] == "VQE":
         theta = np.array( [0.0  for _ in range(number)], requires_grad=True)             
         
     elif params["simulation_object"] == "Spin":
-
         object_vqe = variational_quantum_eigensolver_spin(params["hamiltonian_params"])
         object_vqe.set_device(params["ansatz_params"])
         object_vqe.set_node(params["ansatz_params"])

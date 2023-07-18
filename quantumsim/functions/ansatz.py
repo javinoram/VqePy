@@ -15,6 +15,7 @@ class given_ansatz():
 
     device= qml.device("default.qubit", wires=0)
     node = qml.QNode(circuit, device, interface="autograd")
+
     qubits = 0
     singles=  []
     doubles= []
@@ -97,12 +98,10 @@ class given_ansatz():
             to_measure.append(aux)
         return [qml.probs(wires=to) for to in to_measure]
     
-
-    
 '''
-Hardware Efficient ansatz adaptado para trabajar en el modelo de espines
+Hardware Efficient ansatz
 '''
-class spin_ansatz():
+class HE_ansatz():
     def circuit(self, theta, obs):
         pass
 
@@ -112,6 +111,7 @@ class spin_ansatz():
 
     device= qml.device("default.qubit", wires=0)
     node = qml.QNode(circuit, device, interface="autograd")
+    node_overlap = qml.QNode(circuit, device, interface="autograd")
     pattern = "chain"
     qubits = 0
     correction = 1
@@ -148,27 +148,33 @@ class spin_ansatz():
     def set_node(self, params) -> None:
         self.repetition = params['repetitions']
         self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
+        self.node_overlap = qml.QNode(self.circuit_overlap, self.device, interface=params['interface'])
         return
     
-    def single_rotation(self, params):
+    def single_rotation(self, params, ):
         for i in range(0, self.qubits):
             for j in range(self.correction):
                 qml.RY(params[i], wires=[self.correction*i+j])
         return
 
-    def non_local_gates(self):
-        if self.pattern == 'chain':
-            for i in range(0, self.qubits-1):
-                for j in range(self.correction):
-                    qml.CNOT(wires=[self.correction*i+j, self.correction*(i+1)+j])
-        if self.pattern == 'ring':
-            if self.qubits == 2:
-                for j in range(self.correction):
-                    qml.CNOT(wires=[j, self.correction+j])
-            else:
+    def non_local_gates(self, flag=0):
+        if flag == 0:
+            if self.pattern == 'chain':
                 for i in range(0, self.qubits-1):
                     for j in range(self.correction):
                         qml.CNOT(wires=[self.correction*i+j, self.correction*(i+1)+j])
+            if self.pattern == 'ring':
+                if self.qubits == 2:
+                    for j in range(self.correction):
+                        qml.CNOT(wires=[j, self.correction+j])
+                else:
+                    for i in range(0, self.qubits-1):
+                        for j in range(self.correction):
+                            qml.CNOT(wires=[self.correction*i+j, self.correction*(i+1)+j])
+        else:
+            if self.pattern == 'chain':
+                for i in range(self.qubits-1,0,-1):
+                    qml.CNOT(wires=[i-1, i])
         return
 
     def circuit(self, theta, obs):
@@ -177,7 +183,8 @@ class spin_ansatz():
         for k in range(0, self.repetition):
             params = theta[k*rotation_number:(k+1)*rotation_number]
             self.single_rotation(params)
-            self.non_local_gates()
+            self.non_local_gates(0)
+            
 
         basis_change = ['I' for _ in range(self.qubits)]
         to_measure = []
@@ -217,124 +224,19 @@ class spin_ansatz():
         return [qml.probs(wires=to) for to in to_measure]
     
 
-
-'''
-Given ansatz adaptado para trabajar en el modelo FermiHubbard
-'''
-class given_fermihubbard_ansazt():
-    def circuit(self, theta, obs, type):
-        pass
-
-    base = ""
-    backend = ""
-    token = ""
-
-    device= qml.device("default.qubit", wires=0)
-    node = qml.QNode(circuit, device, interface="autograd")
-    qubits = 0
-    singles=  []
-    doubles= []
-    repetition = 0
-    hf_state = None
-
-    def set_device(self, params) -> None:
-        self.base = params['base']
-
-        ##Maquinas reales
-        if self.base == 'qiskit.ibmq':
-            if params['backend']:
-                self.backend = params['backend']
-            else:
-                raise Exception("Backend no encontrado")
-            if params['token']:
-                self.token = params['token']
-                self.device= qml.device(self.base, backend=self.backend, 
-                    wires=self.qubits,  ibmqx_token= self.token)
-            else:
-                raise Exception("Token de acceso no encontrado")
-        ##Simuladores de qiskit
-        elif self.base == "qiskit.aer":
-            if params['backend']:
-                self.backend = params['backend']
-            else:
-                raise Exception("Backend no encontrado")
-            
-            self.device= qml.device(self.base, backend=self.backend, wires=self.qubits)
-        ##Simuladores de pennylane
-        else:
-            self.device= qml.device(self.base, wires=self.qubits)
-        return
-
-    def set_hiperparams_circuit(self, params) -> None:
-        self.repetition = params['repetitions']
-
-        #Estado base
-        up_array = [0 for _ in range( int(self.qubits/2) )]
-        down_array = [0 for _ in range( int(self.qubits/2) )]
-        elec = params['electrons']
-        upper_index = 0
-        lower_index = 0
-        for i in range(len(up_array)):
-            if elec >0:
-                up_array[upper_index] =  1
-                upper_index += 1
-                elec -= 1 
-
-            if elec >0:
-                down_array[lower_index] =  1
-                lower_index += 1
-                elec -= 1
-
-            if elec <= 0:
-                break 
-
-        self.hf_state = np.concatenate((up_array, down_array), axis=0)
-
-        singles = []
-        doubles = []
-        for i in range(len(up_array)):
-            if up_array[i] == 1:
-                for j in range(i, len(up_array)):
-                    if up_array[j] == 0:
-                        singles.append([i,j])
-
-            if down_array[i] == 1:
-                for j in range(i, len(down_array)):
-                    if down_array[j] == 0:
-                        singles.append([i+len(down_array),j+len(down_array)])
-            
-            if up_array[i] == 1 and down_array[i] == 1:
-                for j in range(i, len(down_array)):
-                    if up_array[j] == 0 and down_array[j] == 0:
-                        doubles.append([i, i+ len(down_array),j, j+len(down_array)])
-
-        self.singles = singles
-        self.doubles = doubles
-        return
-    
-    def set_node(self, params) -> None:
-        self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
-        return
-
-    def circuit(self, theta, obs, type, pauli):
-        qml.BasisState(self.hf_state, wires=range(self.qubits))
-        for i in range(0, self.repetition):
-            for term in self.singles:
-                qml.SingleExcitation(theta[0][i], wires=term)
-
-            for term in self.doubles:
-                qml.DoubleExcitation(theta[1][i], wires=term)
-
-        if type == 'U':
-            return qml.probs(wires=obs)
+    def circuit_overlap(self, theta, theta_overlap):
+        qml.BasisState([0 for _ in range(self.qubits*self.correction)], wires=range(self.qubits*self.correction))
+        rotation_number = self.qubits
+        for k in range(0, self.repetition):
+            params = theta[k*rotation_number:(k+1)*rotation_number]
+            self.single_rotation(params)
+            self.non_local_gates(0)
         
-        else:
-            if 'X' in pauli:
-                for i in obs:
-                    qml.Hadamard(wires=i)
-            if 'Y' in pauli:
-                for i in obs:
-                    qml.S(wires=i)
-                    qml.Hadamard(wires=i)
-
-            return qml.probs(wires=obs)
+        theta_overlap = theta_overlap[::-1]
+        for k in range(0, self.repetition):
+            params = -np.array(theta_overlap[k*rotation_number:(k+1)*rotation_number])[::-1]
+            self.non_local_gates(1)
+            self.single_rotation(params)
+            
+        return qml.probs(wires=[i for i in range(self.qubits)])
+    

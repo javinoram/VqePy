@@ -1,5 +1,5 @@
 method_class : VQE
-simulation_object: Spin
+simulation_object: FermiHubbard
 
 hamiltonian_params:
     #Molecular
@@ -28,11 +28,11 @@ ansatz_params:
     shots: 1000.0
     token: 
 
-minimizate_method: Gradient
+minimizate_method: Scipy
 minimizate_method_params:
     type: SLSQP
-    maxiter: 1000
-    tol: 0.0000001
+    maxiter: 100
+    tol: 0.000001
     step_theta: 0.4
     step_x: 0.8
 

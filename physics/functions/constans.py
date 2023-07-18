@@ -1,5 +1,54 @@
 from pennylane import numpy as np
 import pandas as pd
+import pennylane as qml
+
+def Pauli_function(term, qubits):
+    auxiliar_string =[]
+    if type(term)==qml.ops.qubit.non_parametric_ops.PauliZ:
+        index = term.wires[0]
+        for j in range(qubits):
+            if j== index:
+                auxiliar_string.append("Z")
+            else:
+                auxiliar_string.append("I")
+                
+    elif type(term)==qml.ops.qubit.non_parametric_ops.PauliX:
+        index = term.wires[0]
+        for j in range(qubits):
+            if j== index:
+                auxiliar_string.append("X")
+            else:
+                auxiliar_string.append("I")
+                
+    elif type(term)==qml.ops.qubit.non_parametric_ops.PauliY:
+        index = term.wires[0]
+        for j in range(qubits):
+            if j== index:
+                auxiliar_string.append("Y")
+            else:
+                auxiliar_string.append("I")
+
+    elif type(term)==qml.ops.identity.Identity:
+        for j in range(qubits):
+            auxiliar_string.append("I")
+                
+    else:
+        Nonidentical = term.non_identity_obs
+        auxiliar_string = ["I" for _ in range(qubits)]
+        for pauli in Nonidentical:
+            index = pauli.wires[0]
+            if type(pauli)==qml.ops.qubit.non_parametric_ops.PauliZ:
+                auxiliar_string[index] = "Z"
+            elif type(pauli)==qml.ops.qubit.non_parametric_ops.PauliX:
+                auxiliar_string[index] = "X"
+            elif type(pauli)==qml.ops.qubit.non_parametric_ops.PauliY:
+                auxiliar_string[index] = "Y"
+            else:
+                pass
+    string = ""
+    for s in auxiliar_string:
+        string+= s
+    return string
 
 def conmute_group(pauli):
     pauli_aux = ['1' for i in range(len(pauli))]
