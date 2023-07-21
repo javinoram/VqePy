@@ -1,5 +1,6 @@
 import pennylane as qml
 from pennylane import numpy as np
+from quantumsim.functions.funciones import *
 
 
 '''
@@ -158,12 +159,14 @@ class HE_ansatz():
         return
 
     def non_local_gates(self, flag=0):
+        ## Compuertas en orden normal
         if flag == 0:
             if self.pattern == 'chain':
                 for i in range(0, self.qubits-1):
                     for j in range(self.correction):
                         qml.CNOT(wires=[self.correction*i+j, self.correction*(i+1)+j])
-            if self.pattern == 'ring':
+
+            elif self.pattern == 'ring':
                 if self.qubits == 2:
                     for j in range(self.correction):
                         qml.CNOT(wires=[j, self.correction+j])
@@ -171,61 +174,41 @@ class HE_ansatz():
                     for i in range(0, self.qubits-1):
                         for j in range(self.correction):
                             qml.CNOT(wires=[self.correction*i+j, self.correction*(i+1)+j])
+            
+            elif self.pattern == 'all_to_all':
+                pass
+
+        #Compuertas en orden inverso (la operacion inversa)
         else:
             if self.pattern == 'chain':
                 for i in range(self.qubits-1,0,-1):
-                    qml.CNOT(wires=[i-1, i])
+                    for j in range(self.correction-1, -1, -1):
+                        qml.CNOT(wires=[self.correction*(i-1) +j, self.correction*i +j])
         return
 
-    def circuit(self, theta, obs):
-        qml.BasisState([0 for _ in range(self.qubits*self.correction)], wires=range(self.qubits*self.correction))
+    def circuit(self, theta, obs, characteristic, state):
+        qml.BasisState(state, wires=range(self.qubits*self.correction))
         rotation_number = self.qubits
         for k in range(0, self.repetition):
             params = theta[k*rotation_number:(k+1)*rotation_number]
             self.single_rotation(params)
             self.non_local_gates(0)
             
-
-        basis_change = ['I' for _ in range(self.qubits)]
-        to_measure = []
-        for term in obs:
-            aux = []
-            for j, string in enumerate(term[1]): 
-                if string == 'X':
-                    if basis_change[j] == 'I': 
-                        for k in range(self.correction):
-                            qml.Hadamard(wires=[self.correction*j + k])
-                        basis_change[j] = 'X'
-                        
-                    for k in range(self.correction):
-                        aux.append( self.correction*j + k)
-
-                elif string == 'Y':
-                    if basis_change[j] == 'I': 
-                        for k in range(self.correction):
-                            qml.S(wires=[self.correction*j + k])
-                            qml.Hadamard(wires=[self.correction*j + k])
-                        basis_change[j] = 'Y'
+        for j, index in enumerate(characteristic):
+            if index == 'X':
+                for k in range(self.correction):
+                    qml.Hadamard(wires=[self.correction*j + k])
+            elif index == 'Y':
+                for k in range(self.correction):
+                    qml.S(wires=[self.correction*j + k])
+                    qml.Hadamard(wires=[self.correction*j + k])
+            else: 
+                pass
                     
-                    for k in range(self.correction):
-                        aux.append( self.correction*j + k)
+        return [qml.probs(wires=[0]) if is_identity(term) else qml.probs(wires=find_different_indices(term, "I") ) for term in obs ]
 
-                elif string == 'Z':
-                    if basis_change[j] == 'I': 
-                        basis_change[j] = 'Z'
-
-                    for k in range(self.correction):
-                        aux.append( self.correction*j + k)
-
-                else:
-                    pass
-            to_measure.append(aux)
-        
-        return [qml.probs(wires=to) for to in to_measure]
-    
-
-    def circuit_overlap(self, theta, theta_overlap):
-        qml.BasisState([0 for _ in range(self.qubits*self.correction)], wires=range(self.qubits*self.correction))
+    def circuit_overlap(self, theta, theta_overlap, state, state_overlap):
+        qml.BasisState(state, wires=range(self.qubits*self.correction))
         rotation_number = self.qubits
         for k in range(0, self.repetition):
             params = theta[k*rotation_number:(k+1)*rotation_number]
@@ -237,6 +220,12 @@ class HE_ansatz():
             params = -np.array(theta_overlap[k*rotation_number:(k+1)*rotation_number])[::-1]
             self.non_local_gates(1)
             self.single_rotation(params)
+        
+        #for k in range(len(state_overlap)):
+        #    if state_overlap[k]==1:
+        #        qml.X(k)
+        #    else:
+        #        pass
             
         return qml.probs(wires=[i for i in range(self.qubits)])
     

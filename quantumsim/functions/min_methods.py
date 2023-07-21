@@ -3,6 +3,7 @@ import math
 import scipy.linalg as la
 import scipy as sc
 import warnings
+import itertools
 from pennylane import numpy as np
 from quantumsim.functions.funciones import *
 
@@ -15,6 +16,7 @@ class scipy_optimizer():
     tol = 1e-6
     nit = 0
     number = 0
+    constrains = None
 
     def __init__(self, params):
         self.number = params["number"]
@@ -28,46 +30,65 @@ class scipy_optimizer():
         if params["type"]:
             self.type_method = params["type"]
 
-
     def callback(self, x):
         self.nit += 1
         if self.nit == self.maxiter:
             print("Maximo numero de iteraciones")
             warnings.warn("Terminating optimization: iteration limit reached", TookTooManyIters)
 
-    def VQD(self, cost_function, overlap_cost_function, k,):
+    def set_constrains(self):
+        aux = []
+        for i in range(self.number):
+            f = lambda x: 2*np.pi - np.abs( x[i] )
+            aux.append( ({'type': 'ineq', 'fun': f}) )
+        self.constrains = aux
+        return 
+
+    def VQD(self, cost_function, overlap_cost_function, k, qubits):
         energy = []
         previous_theta = []
 
-        def cost_aux(x): 
-            result = cost_function(x) 
-            for previous in previous_theta:
-                result += 3*overlap_cost_function(x, previous)
-            return result
+        combos = itertools.product([0, 1], repeat=qubits)
+        s = [list(c) for c in combos]
+        s = sort_states(s)
+
+        for i in range(k):  
+            print("state ", i+1)
+
+            def cost_aux(x): 
+                result = cost_function(x, s[0]) 
+                for j, previous in enumerate(previous_theta):
+                    result += 10*overlap_cost_function(x, previous, s[0], s[0])
+                return result
         
-        for _ in range(k):  
             self.nit = 0
             theta = np.array( [np.random.randint(314)/100.0  for _ in range(self.number)], requires_grad=True)
+            #theta = np.array( [0.0  for _ in range(self.number)], requires_grad=True)
             ops = {'maxiter': self.maxiter}
-            xs = sc.optimize.minimize(cost_aux, theta, method=self.type_method, callback=self.callback, tol=self.tol, options=ops)['x']
-            energy.append(cost_function(xs))
+            xs = sc.optimize.minimize(cost_aux, theta, method=self.type_method, 
+                    constraints =self.constrains, callback=self.callback, tol=self.tol, options=ops)['x']
+            
+            energy.append( cost_function(xs, s[0]) )
             previous_theta.append(xs)
         return energy, previous_theta
     
-    def VQE(self, cost_function, theta):
+    def VQE(self, cost_function, qubits):
         energy = []
         theta_evol = []
         self.nit = 0
+        state = [0 for _ in range(qubits)]
 
         def cost_aux(x): 
-            result = cost_function(x)
+            result = cost_function(x, state)
             energy.append(result)
             theta_evol.append(x)
             return result
         
         ops = {'maxiter': self.maxiter}
-        theta = sc.optimize.minimize(cost_aux, theta, method=self.type_method, callback=self.callback, tol=self.tol, options=ops)['x']
-        return energy, theta_evol, theta
+        theta = np.array( [np.random.randint(314)/100.0  for _ in range(self.number)], requires_grad=True)
+        theta = sc.optimize.minimize(cost_aux, theta, method=self.type_method, 
+                    constraints =self.constrains,  callback=self.callback, tol=self.tol, options=ops)['x']
+        return energy, theta
     
     def OS(self, cost_function, x):
         energy = []
@@ -78,7 +99,6 @@ class scipy_optimizer():
             result = cost_function(psi[len(x):], psi[:len(x)])
             energy.append(result)
             theta_evol.append(psi)
-            print(result)
             return result
         
         ops = {'maxiter': self.maxiter}
@@ -143,3 +163,45 @@ class gradiend_optimizer():
                 break
 
         return energy, theta_evol, np.concatenate((x,theta), axis=0)
+    
+
+    def VQD(self, cost_function, overlap_cost_function, k, qubits):
+        previous_theta = []
+        energy_final = [] 
+
+        combos = itertools.product([0, 1], repeat=qubits)
+        s = [list(c) for c in combos]
+
+        #def cost_aux(x): 
+        #    result = cost_function(x) 
+        #    for previous in previous_theta:
+        #        result += 5*overlap_cost_function(x, previous)
+        #    return result
+
+        for i in range(k):
+
+            def cost_aux(x): 
+                result = cost_function(x, s[i]) 
+                for previous in previous_theta:
+                    result += 5*overlap_cost_function(x, previous, s[i])
+                return result
+        
+            print("state ", i+1)
+            self.nit = 0
+            #theta = np.array( [np.random.randint(314)/100.0  for _ in range(self.number)], requires_grad=True)
+            theta = np.array( [0.0  for _ in range(self.number)], requires_grad=True)
+            energy = [cost_function(theta, s[i])]
+            theta_evol = [theta]
+            for _ in range(self.maxiter):
+                theta.requires_grad = True
+                theta = self.theta_optimizer.step(cost_aux, theta)
+                energy.append(cost_function(theta, s[i]))
+                theta_evol.append(theta)
+                prev_energy = energy[len(energy)-2]
+
+                conv = np.abs(energy[-1] - prev_energy)
+                if conv <= self.tol:
+                    break
+            energy_final.append( energy[-1] )
+            previous_theta.append( theta )
+        return energy_final, theta

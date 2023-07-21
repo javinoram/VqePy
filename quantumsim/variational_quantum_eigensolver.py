@@ -10,6 +10,10 @@ un hamiltoniano molecular
 '''
 class vqe_molecular(HE_ansatz):
     hamiltonian_object= None
+    groups_caractericts = None
+    coeff_object = None
+    parity_terms = None
+
     mapping= 'jordan_wigner'
     charge= 0
     mult= 1
@@ -50,37 +54,46 @@ class vqe_molecular(HE_ansatz):
             mult= self.mult,
             basis= self.basis,
             method= self.method)
-        coeff, expression = aux_h.terms()
+        coeff, terms = aux_h.terms()
         del aux_h
 
+        terms, coeff = qml.pauli.group_observables(observables=terms,coefficients=coeff, grouping_type='qwc', method='rlf')
         Pauli_terms = []
-        for k, term in enumerate(expression):
-            string = Pauli_function(term, self.qubits)
-            Pauli_terms.append([coeff[k], string])
-        self.hamiltonian_object = conmute_group(Pauli_terms)
+        for group in terms:
+            aux = []
+            for term in group:
+                string = Pauli_function(term, self.qubits)
+                aux.append(string)
+            Pauli_terms.append(aux)
+
+        self.hamiltonian_object = Pauli_terms
+        self.coeff_object = np.hstack(coeff)
+        self.parity_terms = np.array([ parity(i) for i in range(2**self.qubits) ]) 
         return
     
 
-    def cost_function(self, theta):
-        result = 0.0
-
-        #Iteracion sobre grupos conmutantes
+    def set_group_characteristics(self):
+        aux_char = []
         for group in self.hamiltonian_object:
-            if is_identity(group[0][1]):
-                exchange = group[0][0]
-                exchange.requires_grad = True
-                result += exchange
-            else:
-                result_probs = self.node(theta = theta, obs = group)
-                for k, probs in enumerate(result_probs):
-                    exchange = group[k][0]
-                    exchange.requires_grad = True
-                    for j in range(len(probs)):
-                        result += exchange*probs[j]*parity(j)
-        return result
+            aux_char.append( group_string(group) )
+        self.groups_caractericts = aux_char
+        return
     
-    def overlap_cost_function(self, theta, theta_overlap):
-        result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap)
+
+    def cost_function(self, theta, state):
+        expval = []
+        for i,group in enumerate(self.hamiltonian_object):
+            result_probs = self.node(theta = theta, obs = group, characteristic=self.groups_caractericts[i], state= state)
+            for k,probs in enumerate(result_probs):
+                if is_identity(group[k]):
+                    expval.append(1.0)
+                else:
+                    expval.append( np.sum(probs*self.parity_terms[:probs.shape[0]]) )
+        return np.sum( self.coeff_object*np.array(expval) )
+    
+
+    def overlap_cost_function(self, theta, theta_overlap, state, state_overlap):
+        result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap, state= state, state_overlap=state_overlap)
         return result_probs[0]
 
 
@@ -91,27 +104,55 @@ en un hamiltoniano de espines
 '''
 class vqe_spin(HE_ansatz):
     hamiltonian_object = None
+    groups_caractericts = None
+    coeff_object = None
+    parity_terms = None
 
     def __init__(self, params):
         self.qubits = params['sites']
         self.spin = params['spin']
         self.correction = math.ceil( (int( 2*self.spin+1 ))/2  )
 
-        hamiltonian = []
-        for i in range(self.qubits-1):
-            Xterm = ["I" for _ in range(self.qubits)]
-            Yterm = ["I" for _ in range(self.qubits)]
-            Zterm = ["I" for _ in range(self.qubits)]
+        terms = []
+        coeff = []
+        self.hamiltonian_object = None
 
-            Xterm[i] = "X"; Xterm[i+1]= "X"
-            Yterm[i] = "Y"; Yterm[i+1]= "Y"
-            Zterm[i] = "Z"; Zterm[i+1]= "Z"
+        if params["pattern"] == "open":
+            for i in range(self.qubits-1):
+                Xterm = ["I" for _ in range(self.qubits)]
+                Yterm = ["I" for _ in range(self.qubits)]
+                Zterm = ["I" for _ in range(self.qubits)]
 
-            hamiltonian.append( [params["exchange"][0], Xterm] )
-            hamiltonian.append( [params["exchange"][1], Yterm] )
-            hamiltonian.append( [params["exchange"][2], Zterm] )
+                Xterm[i] = "X"; Xterm[i+1]= "X"
+                Yterm[i] = "Y"; Yterm[i+1]= "Y"
+                Zterm[i] = "Z"; Zterm[i+1]= "Z"
+
+                terms.append( qml.pauli.string_to_pauli_word(list_to_string(Xterm)) )
+                terms.append( qml.pauli.string_to_pauli_word(list_to_string(Yterm)) )
+                terms.append( qml.pauli.string_to_pauli_word(list_to_string(Zterm)) )
+
+                coeff.append( -params["exchange"][0] )
+                coeff.append( -params["exchange"][1] )
+                coeff.append( -params["exchange"][2] )
         
-        if params["pattern"] == "close":
+        elif params["pattern"] == "close":
+            for i in range(self.qubits-1):
+                Xterm = ["I" for _ in range(self.qubits)]
+                Yterm = ["I" for _ in range(self.qubits)]
+                Zterm = ["I" for _ in range(self.qubits)]
+
+                Xterm[i] = "X"; Xterm[i+1]= "X"
+                Yterm[i] = "Y"; Yterm[i+1]= "Y"
+                Zterm[i] = "Z"; Zterm[i+1]= "Z"
+
+                terms.append( qml.pauli.string_to_pauli_word(list_to_string(Xterm)) )
+                terms.append( qml.pauli.string_to_pauli_word(list_to_string(Yterm)) )
+                terms.append( qml.pauli.string_to_pauli_word(list_to_string(Zterm)) )
+
+                coeff.append( -params["exchange"][0] )
+                coeff.append( -params["exchange"][1] )
+                coeff.append( -params["exchange"][2] )
+
             Xterm = ["I" for _ in range(self.qubits)]
             Yterm = ["I" for _ in range(self.qubits)]
             Zterm = ["I" for _ in range(self.qubits)]
@@ -119,24 +160,53 @@ class vqe_spin(HE_ansatz):
             Xterm[0] = "X"; Xterm[self.qubits-1]= "X"
             Yterm[0] = "Y"; Yterm[self.qubits-1]= "Y"
             Zterm[0] = "Z"; Zterm[self.qubits-1]= "Z"
-        else:
-            pass
 
-        self.hamiltonian_object = conmute_group(hamiltonian)
+            terms.append( qml.pauli.string_to_pauli_word(list_to_string(Xterm)) )
+            terms.append( qml.pauli.string_to_pauli_word(list_to_string(Yterm)) )
+            terms.append( qml.pauli.string_to_pauli_word(list_to_string(Zterm)) )
+
+            coeff.append( -params["exchange"][0] )
+            coeff.append( -params["exchange"][1] )
+            coeff.append( -params["exchange"][2] )
+
+        elif params["pattern"] == "all_to_all":
+            pass
+        
+
+        terms, coeff = qml.pauli.group_observables(observables=terms,coefficients=coeff, grouping_type='qwc', method='rlf')
+        Pauli_terms = []
+        for group in terms:
+            aux = []
+            for term in group:
+                string = Pauli_function(term, self.qubits)
+                aux.append(string)
+            Pauli_terms.append(aux)
+
+        self.hamiltonian_object = Pauli_terms
+        self.coeff_object = np.hstack(coeff)
+        self.parity_terms = np.array([ parity(i) for i in range(2**self.qubits) ]) 
+        return
+
+    def set_group_characteristics(self):
+        aux_char = []
+        for group in self.hamiltonian_object:
+            aux_char.append( group_string(group) )
+        self.groups_caractericts = aux_char
         return
     
-    def cost_function(self, theta):
-        result= 0.0
-        for group in self.hamiltonian_object:
-            result_probs = self.node( theta=theta, obs=group)
-            for k, probs in enumerate(result_probs):
-                aux = group[k][0]
-                for j in range(len(probs)):
-                    result += aux*probs[j]*parity(j)
-        return result
+    def cost_function(self, theta, state):
+        expval = []
+        for i,group in enumerate(self.hamiltonian_object):
+            result_probs = self.node(theta = theta, obs = group, characteristic=self.groups_caractericts[i], state= state)
+            for k,probs in enumerate(result_probs):
+                if is_identity(group[k]):
+                    expval.append(1.0)
+                else:
+                    expval.append( np.sum(probs*self.parity_terms[:probs.shape[0]]) )
+        return np.sum( self.coeff_object*np.array(expval) )
     
-    def overlap_cost_function(self, theta, theta_overlap):
-        result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap)
+    def overlap_cost_function(self, theta, theta_overlap, state, state_overlap):
+        result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap, state= state, state_overlap=state_overlap)
         return result_probs[0]
     
 
