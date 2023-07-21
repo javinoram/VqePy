@@ -1,4 +1,3 @@
-Datos de rendimiento.xlsx
-env
+venv
 __pycache__
-demos
+.DS_Store

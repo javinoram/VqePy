@@ -1,9 +1,10 @@
 numpy
 scipy
 pennylane
+pandas
 matplotlib
 pennylane-qiskit
 qiskit_ibm_provider
 pennylane-ionq
-openfermionpyscf
 pyyaml
+dask
