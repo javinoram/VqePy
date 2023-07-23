@@ -19,6 +19,7 @@ class vqe_molecular(HE_ansatz):
     mult= 1
     basis='sto-3g'
     method='dhf'
+    spin = 0.5
 
     def __init__(self, symbols, coordinates, params= None):
         if params['mapping']:
@@ -68,7 +69,7 @@ class vqe_molecular(HE_ansatz):
 
         self.hamiltonian_object = Pauli_terms
         self.coeff_object = np.hstack(coeff)
-        self.parity_terms = np.array([ parity(i) for i in range(2**self.qubits) ]) 
+        self.parity_terms = np.array([ parity(i, self.spin, self.qubits) for i in range(2**self.qubits) ]) 
         return
     
 
@@ -117,11 +118,11 @@ class vqe_spin(HE_ansatz):
         coeff = []
         self.hamiltonian_object = None
 
-        if params["pattern"] == "open":
+        if params["pattern"] in ("open", "close"):
             for i in range(self.qubits-1):
-                Xterm = ["I" for _ in range(self.qubits)]
-                Yterm = ["I" for _ in range(self.qubits)]
-                Zterm = ["I" for _ in range(self.qubits)]
+                Xterm = ["I"]*self.qubits
+                Yterm = ["I"]*self.qubits
+                Zterm = ["I"]*self.qubits
 
                 Xterm[i] = "X"; Xterm[i+1]= "X"
                 Yterm[i] = "Y"; Yterm[i+1]= "Y"
@@ -134,16 +135,18 @@ class vqe_spin(HE_ansatz):
                 coeff.append( -params["exchange"][0] )
                 coeff.append( -params["exchange"][1] )
                 coeff.append( -params["exchange"][2] )
-        
-        elif params["pattern"] == "close":
-            for i in range(self.qubits-1):
-                Xterm = ["I" for _ in range(self.qubits)]
-                Yterm = ["I" for _ in range(self.qubits)]
-                Zterm = ["I" for _ in range(self.qubits)]
+                
+            if params["pattern"] == "open":
+                pass
 
-                Xterm[i] = "X"; Xterm[i+1]= "X"
-                Yterm[i] = "Y"; Yterm[i+1]= "Y"
-                Zterm[i] = "Z"; Zterm[i+1]= "Z"
+            else:
+                Xterm = ["I"]*self.qubits
+                Yterm = ["I"]*self.qubits
+                Zterm = ["I"]*self.qubits
+
+                Xterm[0] = "X"; Xterm[self.qubits-1]= "X"
+                Yterm[0] = "Y"; Yterm[self.qubits-1]= "Y"
+                Zterm[0] = "Z"; Zterm[self.qubits-1]= "Z"
 
                 terms.append( qml.pauli.string_to_pauli_word(list_to_string(Xterm)) )
                 terms.append( qml.pauli.string_to_pauli_word(list_to_string(Yterm)) )
@@ -152,25 +155,25 @@ class vqe_spin(HE_ansatz):
                 coeff.append( -params["exchange"][0] )
                 coeff.append( -params["exchange"][1] )
                 coeff.append( -params["exchange"][2] )
-
-            Xterm = ["I" for _ in range(self.qubits)]
-            Yterm = ["I" for _ in range(self.qubits)]
-            Zterm = ["I" for _ in range(self.qubits)]
-
-            Xterm[0] = "X"; Xterm[self.qubits-1]= "X"
-            Yterm[0] = "Y"; Yterm[self.qubits-1]= "Y"
-            Zterm[0] = "Z"; Zterm[self.qubits-1]= "Z"
-
-            terms.append( qml.pauli.string_to_pauli_word(list_to_string(Xterm)) )
-            terms.append( qml.pauli.string_to_pauli_word(list_to_string(Yterm)) )
-            terms.append( qml.pauli.string_to_pauli_word(list_to_string(Zterm)) )
-
-            coeff.append( -params["exchange"][0] )
-            coeff.append( -params["exchange"][1] )
-            coeff.append( -params["exchange"][2] )
 
         elif params["pattern"] == "all_to_all":
-            pass
+            for i in range(self.qubits-1):
+                for j in range(i+1, self.qubits):
+                    Xterm = ["I"]*self.qubits
+                    Yterm = ["I"]*self.qubits
+                    Zterm = ["I"]*self.qubits
+
+                    Xterm[i] = "X"; Xterm[j]= "X"
+                    Yterm[i] = "Y"; Yterm[j]= "Y"
+                    Zterm[i] = "Z"; Zterm[j]= "Z"
+
+                    terms.append( qml.pauli.string_to_pauli_word(list_to_string(Xterm)) )
+                    terms.append( qml.pauli.string_to_pauli_word(list_to_string(Yterm)) )
+                    terms.append( qml.pauli.string_to_pauli_word(list_to_string(Zterm)) )
+
+                    coeff.append( -params["exchange"][0] )
+                    coeff.append( -params["exchange"][1] )
+                    coeff.append( -params["exchange"][2] )
         
 
         terms, coeff = qml.pauli.group_observables(observables=terms,coefficients=coeff, grouping_type='qwc', method='rlf')
@@ -184,7 +187,7 @@ class vqe_spin(HE_ansatz):
 
         self.hamiltonian_object = Pauli_terms
         self.coeff_object = np.hstack(coeff)
-        self.parity_terms = np.array([ parity(i) for i in range(2**self.qubits) ]) 
+        self.parity_terms = np.array([ parity(i, self.spin, self.qubits) for i in range(2**(self.qubits*self.correction)) ]) 
         return
 
     def set_group_characteristics(self):
@@ -218,54 +221,61 @@ class vqe_fermihubbard(HE_ansatz):
     hamiltonian_object= None
     hopping = 0.0
     potential = 0.0
-    
+    spin = 0.5
+
     def __init__(self, params):
         self.qubits = params["sites"]*2
-        self.hopping = params["hopping"]
+        self.hopping = -params["hopping"]
         self.potential = params["potential"]
-
         fermi_sentence = 0.0
-        coeff = []
-        expression = []
 
-        for i in range(params["sites"]-1):
-            fermi_sentence +=  -self.hopping*FermiC(2*i)*FermiA(2*i +2) + -self.hopping*FermiC(2*i +2)*FermiA(2*i)
-            fermi_sentence +=  -self.hopping*FermiC(2*i+1)*FermiA(2*i +3) + -self.hopping*FermiC(2*i +3)*FermiA(2*i +1)  
-            fermi_sentence +=  -self.potential*FermiC(2*i)*FermiA(2*i)*FermiC(2*i +1)*FermiA(2*i +1) 
+        if params["sites"] == 1:
+            fermi_sentence +=  self.potential*FermiC(0)*FermiA(0)*FermiC(1)*FermiA(1)
+        else:
+            for i in range(params["sites"]-1):
+                fermi_sentence +=  self.hopping*FermiC(2*i)*FermiA(2*i +2) + self.hopping*FermiC(2*i +2)*FermiA(2*i)
+                fermi_sentence +=  self.hopping*FermiC(2*i+1)*FermiA(2*i +3) + self.hopping*FermiC(2*i +3)*FermiA(2*i +1)  
+                fermi_sentence +=  self.potential*FermiC(2*i)*FermiA(2*i)*FermiC(2*i +1)*FermiA(2*i +1)
 
-        fermi_sentence = qml.jordan_wigner( fermi_sentence )
-        for term in fermi_sentence:
-            coeff_aux, operator_aux = term.terms()
-            if np.real(coeff_aux[0]) != 0.0:
-                coeff.append( np.real(coeff_aux[0]) )
-                expression.append( operator_aux[0] )
+            if params["pattern"] == "close" and params["sites"] != 2:
+                qsite = 2*(params["sites"]-1)
+                fermi_sentence +=  self.hopping*FermiC(0)*FermiA(qsite) + self.hopping*FermiC(qsite)*FermiA(0)
+                fermi_sentence +=  self.hopping*FermiC(1)*FermiA(qsite+1) + self.hopping*FermiC(qsite+1)*FermiA(1) 
 
+        coeff, terms = qml.jordan_wigner( fermi_sentence, ps=True).hamiltonian().terms()
+        terms, coeff = qml.pauli.group_observables(observables=terms,coefficients=np.real(coeff), grouping_type='qwc', method='rlf')
         Pauli_terms = []
-        for k, term in enumerate(expression):
-            if type(term) not in [qml.ops.identity.Identity, qml.ops.qubit.non_parametric_ops.PauliZ,  qml.ops.qubit.non_parametric_ops.PauliX, qml.ops.qubit.non_parametric_ops.PauliY]:
-                _, aux2 = term.terms()
-                decomp_list = aux2[0].decomposition()
-            string = Pauli_function(decomp_list, 6)
-            Pauli_terms.append( [coeff[k], string] )
+        for group in terms:
+            aux = []
+            for term in group:
+                string = Pauli_function(term, self.qubits)
+                aux.append(string)
+            Pauli_terms.append(aux)
 
-        self.hamiltonian_object = conmute_group(Pauli_terms)
+        self.hamiltonian_object = Pauli_terms
+        self.coeff_object = np.hstack(coeff)
+        self.parity_terms = np.array([ parity(i, self.spin, self.qubits) for i in range(2**self.qubits) ])
         return
     
     
-    def cost_function(self, theta):
-        params = [theta[:self.repetition], theta[self.repetition:]]
-        result = 0.0
-
+    def set_group_characteristics(self):
+        aux_char = []
         for group in self.hamiltonian_object:
-            if is_identity(group[0][1]):
-                exchange = np.array( group[0][0], requires_grad=True) 
-                exchange.requires_grad = True
-                result += exchange
-            else:
-                result_probs = self.node(theta = params, obs = group)
-                for k, probs in enumerate(result_probs):
-                    exchange = np.array( group[k][0], requires_grad=True) 
-                    exchange.requires_grad = True
-                    for j in range(len(probs)):
-                        result += exchange*probs[j]*parity(j)
-        return np.real(result)
+            aux_char.append( group_string(group) )
+        self.groups_caractericts = aux_char
+        return
+    
+    def cost_function(self, theta, state):
+        expval = []
+        for i,group in enumerate(self.hamiltonian_object):
+            result_probs = self.node(theta = theta, obs = group, characteristic=self.groups_caractericts[i], state= state)
+            for k,probs in enumerate(result_probs):
+                if is_identity(group[k]):
+                    expval.append(1.0)
+                else:
+                    expval.append( np.sum(probs*self.parity_terms[:probs.shape[0]]) )
+        return np.sum( self.coeff_object*np.array(expval) )
+    
+    def overlap_cost_function(self, theta, theta_overlap, state, state_overlap):
+        result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap, state= state, state_overlap=state_overlap)
+        return result_probs[0]

@@ -76,7 +76,10 @@ class scipy_optimizer():
         energy = []
         theta_evol = []
         self.nit = 0
-        state = [0 for _ in range(qubits)]
+        #state =  qml.qchem.hf_state(int(qubits/2), qubits)
+        state = [0 if i%2==0 else 1 for i in range(qubits)]
+        print(state)
+
 
         def cost_aux(x): 
             result = cost_function(x, state)
@@ -87,7 +90,7 @@ class scipy_optimizer():
         ops = {'maxiter': self.maxiter}
         theta = np.array( [np.random.randint(314)/100.0  for _ in range(self.number)], requires_grad=True)
         theta = sc.optimize.minimize(cost_aux, theta, method=self.type_method, 
-                    constraints =self.constrains,  callback=self.callback, tol=self.tol, options=ops)['x']
+                constraints =self.constrains,  callback=self.callback, tol=self.tol, options=ops)['x']
         return energy, theta
     
     def OS(self, cost_function, x):
@@ -103,8 +106,9 @@ class scipy_optimizer():
         
         ops = {'maxiter': self.maxiter}
         theta = np.array( [np.random.randint(314)/100.0  for _ in range(self.number)], requires_grad=True)
-        theta = sc.optimize.minimize(cost_aux, np.concatenate((x,theta), axis=0), method=self.type_method, callback=self.callback, tol=self.tol, options=ops)['x']
-        return energy, theta_evol, theta
+        theta = sc.optimize.minimize(cost_aux, np.concatenate((x,theta), axis=0), method=self.type_method, 
+                callback=self.callback, tol=self.tol, options=ops)['x']
+        return energy, theta
 
 
 
@@ -129,26 +133,34 @@ class gradiend_optimizer():
         if params["step_x"]:
             self.x_optimizer = qml.GradientDescentOptimizer(stepsize=params["step_x"])
 
-    def VQE(self, cost_function, theta):
-        energy = [cost_function(theta)]
+    def VQE(self, cost_function, qubits):
+
+        #theta = np.array( [0.0  for _ in range(self.number)], requires_grad=True)
+        theta = np.array( [np.random.randint(314)/100.0  for _ in range(self.number)], requires_grad=True)
+        #state =  qml.qchem.hf_state(int(qubits/2), qubits)
+        state = [0 for i in range(qubits)]
+        energy = [cost_function(theta, state)]
         theta_evol = [theta]
+
+        def cost_aux(x): 
+            result = cost_function(x, state) 
+            return result
 
         for _ in range(self.maxiter):
             theta.requires_grad = True
-            theta = self.theta_optimizer.step(cost_function, theta)
-            energy.append(cost_function(theta))
+            theta = self.theta_optimizer.step(cost_aux, theta)
+            energy.append(cost_function(theta, state))
             theta_evol.append(theta)
             prev_energy = energy[len(energy)-2]
 
             conv = np.abs(energy[-1] - prev_energy)
             if conv <= self.tol:
                 break
-        return energy, theta_evol, theta
-        
-    
-    def OS(self, cost_function, theta, x, grad):
+        return energy, theta
+           
+    def OS(self, cost_function, x, grad):
         energy = []
-        theta_evol = []
+        theta = np.array( [0.0  for _ in range(self.number)], requires_grad=True)
 
         for _ in range(self.maxiter):
             theta.requires_grad = True
@@ -162,21 +174,14 @@ class gradiend_optimizer():
             if np.max(grad(theta, x)) <= self.tol:
                 break
 
-        return energy, theta_evol, np.concatenate((x,theta), axis=0)
+        return energy, np.concatenate((x,theta), axis=0)
     
-
     def VQD(self, cost_function, overlap_cost_function, k, qubits):
         previous_theta = []
         energy_final = [] 
 
         combos = itertools.product([0, 1], repeat=qubits)
         s = [list(c) for c in combos]
-
-        #def cost_aux(x): 
-        #    result = cost_function(x) 
-        #    for previous in previous_theta:
-        #        result += 5*overlap_cost_function(x, previous)
-        #    return result
 
         for i in range(k):
 

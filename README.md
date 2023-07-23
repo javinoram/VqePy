@@ -1,22 +1,26 @@
 # Tesis project
-Project to get the degree of computer science.
+Project to get a degree in computer science.
 
 The main idea is use variational quantum algorithms the study condensed matter's models,
 the fields of interest are the following.
-1. Spin systems
-2. 2D materials
-3. Molecules
+1. Molecular hamiltonian
+2. Spin hamiltonian
+3. Fermi-Hubbard hamiltonian
 
 This project didnt want to be another quantum library. This one should be see as a high level
 implementation to study systems with a fixed route to be executed, so, the user only need to give 
-a parameter's file and no programming is needed. 
+a parameter's file and just the minimun programming is needed. 
 
 # Libraries
-1. pennylane
-2. numpy
-3. scipy
+All the code is done using as the base the pennylane library.
+1. numpy
+2. scipy
+3. pennylane
 4. matplotlib
 5. pennylane-qiskit
+6. qiskit_ibm_provider
+7. openfermionpyscf
+8. pyyaml
 
 # Requirements
 It's recommended create a virtual enviroment and install all the libraries indicated in the requiremets.txt. 
@@ -24,11 +28,10 @@ It's recommended create a virtual enviroment and install all the libraries indic
 ``` pip3 install -r requirements.txt ```
 
 # Methods
-The method considerated to be applied in the different models are:
-1. Variational quantum eigensolver (VQE) with penalty terms
-2. VQE for structure optimization
-3. Get upper level using VQE
-4. Use VQE for upper spines
-5. Variational quantum thermalizer
+Here the three variational methods considerer are:
 
-Not all method can be used in all types of hamiltonian.
+1. Variational quantum eigensolver
+2. Variational quantum deflation
+3. Variational quantum thermalizer
+
+More information in the repository wiki.
