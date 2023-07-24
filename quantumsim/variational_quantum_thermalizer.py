@@ -29,13 +29,10 @@ class vqt_spin(HE_ansatz):
                 Yterm[i] = "Y"; Yterm[i+1]= "Y"
                 Zterm[i] = "Z"; Zterm[i+1]= "Z"
 
-                terms.append( qml.pauli.string_to_pauli_word(list_to_string(Xterm)) )
-                terms.append( qml.pauli.string_to_pauli_word(list_to_string(Yterm)) )
-                terms.append( qml.pauli.string_to_pauli_word(list_to_string(Zterm)) )
-
-                coeff.append( -params["exchange"][0] )
-                coeff.append( -params["exchange"][1] )
-                coeff.append( -params["exchange"][2] )
+                terms.extend( [qml.pauli.string_to_pauli_word(list_to_string(Xterm)),
+                               qml.pauli.string_to_pauli_word(list_to_string(Yterm)),
+                               qml.pauli.string_to_pauli_word(list_to_string(Zterm))] )
+                coeff.extend( [-params["exchange"][0], -params["exchange"][1], -params["exchange"][2]] )
                 
             if params["pattern"] == "open":
                 pass
@@ -49,13 +46,10 @@ class vqt_spin(HE_ansatz):
                 Yterm[0] = "Y"; Yterm[self.qubits-1]= "Y"
                 Zterm[0] = "Z"; Zterm[self.qubits-1]= "Z"
 
-                terms.append( qml.pauli.string_to_pauli_word(list_to_string(Xterm)) )
-                terms.append( qml.pauli.string_to_pauli_word(list_to_string(Yterm)) )
-                terms.append( qml.pauli.string_to_pauli_word(list_to_string(Zterm)) )
-
-                coeff.append( -params["exchange"][0] )
-                coeff.append( -params["exchange"][1] )
-                coeff.append( -params["exchange"][2] )
+                terms.extend( [qml.pauli.string_to_pauli_word(list_to_string(Xterm)),
+                               qml.pauli.string_to_pauli_word(list_to_string(Yterm)),
+                               qml.pauli.string_to_pauli_word(list_to_string(Zterm))] )
+                coeff.extend( [-params["exchange"][0], -params["exchange"][1], -params["exchange"][2]] )
 
         elif params["pattern"] == "all_to_all":
             for i in range(self.qubits-1):
@@ -68,13 +62,10 @@ class vqt_spin(HE_ansatz):
                     Yterm[i] = "Y"; Yterm[j]= "Y"
                     Zterm[i] = "Z"; Zterm[j]= "Z"
 
-                    terms.append( qml.pauli.string_to_pauli_word(list_to_string(Xterm)) )
-                    terms.append( qml.pauli.string_to_pauli_word(list_to_string(Yterm)) )
-                    terms.append( qml.pauli.string_to_pauli_word(list_to_string(Zterm)) )
-
-                    coeff.append( -params["exchange"][0] )
-                    coeff.append( -params["exchange"][1] )
-                    coeff.append( -params["exchange"][2] )
+                    terms.extend( [qml.pauli.string_to_pauli_word(list_to_string(Xterm)),
+                               qml.pauli.string_to_pauli_word(list_to_string(Yterm)),
+                               qml.pauli.string_to_pauli_word(list_to_string(Zterm))] )
+                    coeff.extend( [-params["exchange"][0], -params["exchange"][1], -params["exchange"][2]] )
         
 
         terms, coeff = qml.pauli.group_observables(observables=terms,coefficients=coeff, grouping_type='qwc', method='rlf')
