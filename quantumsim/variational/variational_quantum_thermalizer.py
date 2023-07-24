@@ -1,8 +1,5 @@
-from quantumsim.functions.ansatz import *
-from quantumsim.functions.funciones import *
-from pennylane import qchem
-from pennylane import FermiC, FermiA
-import math
+from quantumsim.ansatz.ansatz import *
+from quantumsim.optimizers.funciones import *
 import itertools
 
 class vqt_spin(HE_ansatz):

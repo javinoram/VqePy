@@ -5,7 +5,7 @@ import scipy as sc
 import warnings
 import itertools
 from pennylane import numpy as np
-from quantumsim.functions.funciones import *
+from quantumsim.optimizers.funciones import *
 
 class TookTooManyIters(Warning):
     pass

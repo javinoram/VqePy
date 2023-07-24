@@ -1,5 +1,5 @@
-from quantumsim.functions.ansatz import *
-from quantumsim.functions.funciones import *
+from quantumsim.ansatz.ansatz import *
+from quantumsim.optimizers.funciones import *
 from pennylane import qchem
 from pennylane import FermiC, FermiA
 import math
@@ -184,12 +184,14 @@ class vqe_spin(HE_ansatz):
         self.parity_terms = np.array([ parity(i, self.spin, self.qubits) for i in range(2**(self.qubits*self.correction)) ]) 
         return
 
+
     def set_group_characteristics(self):
         aux_char = []
         for group in self.hamiltonian_object:
             aux_char.append( group_string(group) )
         self.groups_caractericts = aux_char
         return
+    
     
     def cost_function(self, theta, state):
         expval = []
@@ -202,6 +204,7 @@ class vqe_spin(HE_ansatz):
                     expval.append( np.sum(probs*self.parity_terms[:probs.shape[0]]) )
         return np.sum( self.coeff_object*np.array(expval) )
     
+
     def overlap_cost_function(self, theta, theta_overlap, state, state_overlap):
         result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap, state= state, state_overlap=state_overlap)
         return result_probs[0]
@@ -259,6 +262,7 @@ class vqe_fermihubbard(HE_ansatz):
         self.groups_caractericts = aux_char
         return
     
+
     def cost_function(self, theta, state):
         expval = []
         for i,group in enumerate(self.hamiltonian_object):
@@ -269,6 +273,7 @@ class vqe_fermihubbard(HE_ansatz):
                 else:
                     expval.append( np.sum(probs*self.parity_terms[:probs.shape[0]]) )
         return np.sum( self.coeff_object*np.array(expval) )
+    
     
     def overlap_cost_function(self, theta, theta_overlap, state, state_overlap):
         result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap, state= state, state_overlap=state_overlap)

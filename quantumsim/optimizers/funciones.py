@@ -29,10 +29,7 @@ def find_different_indices(input_string, character):
     return list(np.where(char_array != character)[0])
 
 def list_to_string(l):
-    string = ""
-    for s in l:
-        string+= s
-    return string
+    return ''.join(l)
 
 def binary_to_string(state):
     return ''.join([str(i) for i in state])
@@ -101,13 +98,13 @@ def is_identity(term):
 
 
 def finite_diff(f, x, delta=0.01):
-        gradient = []
-        for i in range(len(x)):
-            shift = np.zeros_like(x)
-            shift[i] += 0.5 * delta
-            res = (f(x + shift) - f(x - shift)) * delta**-1
-            gradient.append(res)
-        return gradient
+    gradient = []
+    for i in range(len(x)):
+        shift = np.zeros_like(x)
+        shift[i] += 0.5 * delta
+        res = (f(x + shift) - f(x - shift)) * delta**-1
+        gradient.append(res)
+    return gradient
 
 
 def calculate_entropy(distribution):
@@ -132,10 +129,5 @@ conts_spin = { "1": {'0000':1, '1010':1, '0010': -1, '1000':-1},
             "1.5": {'0000':9/4, '0001':3/4, '0010':-3/4, '0011':-9/4, 
                 '0100':3/4, '0101':1/4, '0110':-1/4, '0111':-3/4,
                 '1000':-3/4, '1001':-1/4, '1010':1/4, '1011':-3/4,
-                '1100':-9/4, '1101':-3/4, '1110':3/4, '1111':9/4},
-
-            "2": {"1": {'000':2, '001':1, '010':0, '011':-1, '100':-2},
-                      },
-            "2.5": {"1": {'000':5/2, '001':3/2, '010':1/2, '011':-1/2, '100':-3/2, '101':-5/2},
-                      },
+                '1100':-9/4, '1101':-3/4, '1110':3/4, '1111':9/4}
             }
