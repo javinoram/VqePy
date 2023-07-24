@@ -1,4 +1,4 @@
-from quantumsim.ansatz.ansatz import *
+from quantumsim.ansatz import *
 from quantumsim.optimizers.funciones import *
 import itertools
 

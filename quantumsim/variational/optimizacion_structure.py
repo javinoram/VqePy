@@ -1,5 +1,5 @@
-from quantumsim.ansatz.ansatz import *
-from quantumsim.optimizers.funciones import *
+from quantumsim.ansatz import *
+from quantumsim.optimizers import *
 from pennylane import qchem
 from pennylane import numpy as np
 

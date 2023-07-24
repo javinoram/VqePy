@@ -7,7 +7,7 @@ the fields of interest are the following.
 2. Spin hamiltonian
 3. Fermi-Hubbard hamiltonian
 
-This project didnt want to be another quantum library. This one should be see as a high level
+This project didnt want to be another quantum library. This should be see as a high level
 implementation to study systems with a fixed route to be executed, so, the user only need to give 
 a parameter's file and just the minimun programming is needed. 
 
