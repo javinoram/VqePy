@@ -21,6 +21,7 @@ All the code is done using as the base the pennylane library.
 6. qiskit_ibm_provider
 7. openfermionpyscf
 8. pyyaml
+9. dask
 
 # Requirements
 It's recommended create a virtual enviroment and install all the libraries indicated in the requiremets.txt. 

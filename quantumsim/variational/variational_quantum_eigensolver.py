@@ -8,43 +8,54 @@ import math
 Clase con las funciones de coste para utilizar VQE y VQD en 
 un hamiltoniano molecular
 '''
-class vqe_molecular(HE_ansatz):
+class vqe_molecular():
     hamiltonian_object= None
     groups_caractericts = None
     coeff_object = None
     parity_terms = None
+    qubits = 0
 
     mapping= 'jordan_wigner'
     charge= 0
     mult= 1
     basis='sto-3g'
     method='dhf'
-    spin = 0.5
+    active_electrons = None
+    active_orbitals = None
+
+    node = None
+    node_overlap = None
 
     def __init__(self, symbols, coordinates, params= None):
-        if params['mapping']:
+        if 'mapping' in params:
             if params['mapping'] in ("jordan_wigner"):
                 self.mapping = params['mapping']
             else:
                 raise Exception("Mapping no valido, considere jordan_wigner")
             
-        if params['charge']:
+        if 'charge' in params:
             self.charge = params['charge']
 
-        if params['mult']:
+        if 'mult' in params:
             self.mult = params['mult']
 
-        if params['basis']:
+        if 'basis' in params:
             if params['basis'] in ("sto-3g", "6-31g", "6-311g", "cc-pvdz"):
                 self.basis = params['basis']
             else:
                 raise Exception("Base no valida, considere sto-3g, 6-31g, 6-311g, cc-pvdz")
         
-        if params['method']:
+        if 'method' in params:
             if params['method'] in ("pyscf", "dhf"):
                 self.method = params['method']
             else:
                 raise Exception("Metodo no valido, considere dhf o pyscf")
+            
+        if 'active_electrons' in params:
+            self.active_electrons = params['active_electrons']
+
+        if 'active_orbitals' in params:
+            self.active_orbitals = params['active_orbitals']
 
         
         aux_h, self.qubits = qchem.molecular_hamiltonian(
@@ -54,13 +65,15 @@ class vqe_molecular(HE_ansatz):
             charge= self.charge,
             mult= self.mult,
             basis= self.basis,
-            method= self.method)
+            method= self.method,
+            active_electrons=self.active_electrons, 
+            active_orbitals=self.active_orbitals)
         coeff, terms = aux_h.terms()
         del aux_h
 
-        terms, coeff = qml.pauli.group_observables(observables=terms,coefficients=coeff, grouping_type='qwc', method='rlf')
-        Pauli_terms = []
-        for group in terms:
+        terms, coeff = qml.pauli.group_observables(observables=terms, coefficients=coeff, grouping_type='qwc', method='rlf')
+        Pauli_terms = [] 
+        for group in terms: 
             aux = []
             for term in group:
                 string = Pauli_function(term, self.qubits)
@@ -68,8 +81,8 @@ class vqe_molecular(HE_ansatz):
             Pauli_terms.append(aux)
 
         self.hamiltonian_object = Pauli_terms
-        self.coeff_object = np.hstack(coeff)
-        self.parity_terms = np.array([ parity(i, self.spin, self.qubits) for i in range(2**self.qubits) ]) 
+        self.coeff_object = coeff
+        self.parity_terms = np.array([ parity(i, 0.5, self.qubits) for i in range(2**self.qubits) ]) 
         return
     
 
@@ -79,23 +92,51 @@ class vqe_molecular(HE_ansatz):
             aux_char.append( group_string(group) )
         self.groups_caractericts = aux_char
         return
-    
 
-    def cost_function(self, theta, state):
+
+    def process_group(self, theta, i):
         expval = []
-        for i,group in enumerate(self.hamiltonian_object):
-            result_probs = self.node(theta = theta, obs = group, characteristic=self.groups_caractericts[i], state= state)
-            for k,probs in enumerate(result_probs):
-                if is_identity(group[k]):
-                    expval.append(1.0)
-                else:
-                    expval.append( np.sum(probs*self.parity_terms[:probs.shape[0]]) )
-        return np.sum( self.coeff_object*np.array(expval) )
+        term = self.hamiltonian_object[i]
+        charac = self.groups_caractericts[i]
+
+        result_probs = self.node(theta=theta, obs=term, characteristic=charac)
+        for k, probs in enumerate(result_probs):
+            if is_identity(term[k]):
+                expval.append( np.sum( probs ) )
+            else:
+                expval.append( np.sum( probs * self.parity_terms[:probs.shape[0]] ) )
+
+        result = self.coeff_object[i]*np.array(expval)
+        return np.sum(result)
     
 
-    def overlap_cost_function(self, theta, theta_overlap, state, state_overlap):
-        result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap, state= state, state_overlap=state_overlap)
-        return result_probs[0]
+    def cost_function(self, theta):
+        results = []
+        for i in range(len(self.hamiltonian_object)):
+            results.append( self.process_group(theta, i) )
+        return np.sum( results )
+
+
+    def cost_function_parallel(self, theta):
+        results = []
+        for i in range(len(self.hamiltonian_object)):
+            results.append( dask.delayed(self.process_group)(theta, i) )
+        num_workers = 4
+        result = dask.compute(*results, scheduler="processes", num_workers=num_workers)
+        return np.sum( result )
+    
+
+    def overlap_cost_function(self, theta, theta_overlap):
+        result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap)
+        aux1 = result_probs[:self.qubits]
+        aux2 = result_probs[self.qubits:2*self.qubits]
+        expval1 = []
+        expval2 = []
+
+        for i, term in enumerate(aux1):
+            expval1.append( term[0] )
+            expval2.append( aux2[i][0] )
+        return 2*np.abs( 0.5 - np.sum( np.array(expval1)*np.array(expval2) )  )
 
 
 
@@ -103,11 +144,14 @@ class vqe_molecular(HE_ansatz):
 Clase con las funciones de coste para utilizar VQE y VQD
 en un hamiltoniano de espines
 '''
-class vqe_spin(HE_ansatz):
+class vqe_spin():
     hamiltonian_object = None
     groups_caractericts = None
     coeff_object = None
     parity_terms = None
+
+    node = None
+    node_overlap = None
 
     def __init__(self, params):
         self.qubits = params['sites']
@@ -151,23 +195,8 @@ class vqe_spin(HE_ansatz):
                                qml.pauli.string_to_pauli_word(list_to_string(Zterm))] )
 
                 coeff.extend( [-params["exchange"][0], -params["exchange"][1], -params["exchange"][2]] )
-
-        elif params["pattern"] == "all_to_all":
-            for i in range(self.qubits-1):
-                for j in range(i+1, self.qubits):
-                    Xterm = ["I"]*self.qubits
-                    Yterm = ["I"]*self.qubits
-                    Zterm = ["I"]*self.qubits
-
-                    Xterm[i] = "X"; Xterm[j]= "X"
-                    Yterm[i] = "Y"; Yterm[j]= "Y"
-                    Zterm[i] = "Z"; Zterm[j]= "Z"
-
-                    terms.extend( [qml.pauli.string_to_pauli_word(list_to_string(Xterm)),
-                               qml.pauli.string_to_pauli_word(list_to_string(Yterm)),
-                               qml.pauli.string_to_pauli_word(list_to_string(Zterm))] )
-
-                    coeff.extend( [-params["exchange"][0], -params["exchange"][1], -params["exchange"][2]] )
+        else:
+            raise("Pattern no available, consider open and close pattern")
         
 
         terms, coeff = qml.pauli.group_observables(observables=terms,coefficients=coeff, grouping_type='qwc', method='rlf')
@@ -180,7 +209,7 @@ class vqe_spin(HE_ansatz):
             Pauli_terms.append(aux)
 
         self.hamiltonian_object = Pauli_terms
-        self.coeff_object = np.hstack(coeff)
+        self.coeff_object = coeff
         self.parity_terms = np.array([ parity(i, self.spin, self.qubits) for i in range(2**(self.qubits*self.correction)) ]) 
         return
 
@@ -193,20 +222,40 @@ class vqe_spin(HE_ansatz):
         return
     
     
-    def cost_function(self, theta, state):
+    def process_group(self, theta, i):
         expval = []
-        for i,group in enumerate(self.hamiltonian_object):
-            result_probs = self.node(theta = theta, obs = group, characteristic=self.groups_caractericts[i], state= state)
-            for k,probs in enumerate(result_probs):
-                if is_identity(group[k]):
-                    expval.append(1.0)
-                else:
-                    expval.append( np.sum(probs*self.parity_terms[:probs.shape[0]]) )
-        return np.sum( self.coeff_object*np.array(expval) )
+        term = self.hamiltonian_object[i]
+        charac = self.groups_caractericts[i]
+
+        result_probs = self.node(theta=theta, obs=term, characteristic=charac)
+        for k, probs in enumerate(result_probs):
+            if is_identity(term[k]):
+                expval.append( np.sum( probs ) )
+            else:
+                expval.append( np.sum( probs * self.parity_terms[:probs.shape[0]] ) )
+
+        result = self.coeff_object[i]*np.array(expval)
+        return np.sum(result)
     
 
-    def overlap_cost_function(self, theta, theta_overlap, state, state_overlap):
-        result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap, state= state, state_overlap=state_overlap)
+    def cost_function(self, theta):
+        results = []
+        for i in range(len(self.hamiltonian_object)):
+            results.append( self.process_group(theta, i) )
+        return np.sum( results )
+
+
+    def cost_function_parallel(self, theta):
+        results = []
+        for i in range(len(self.hamiltonian_object)):
+            results.append( dask.delayed(self.process_group)(theta, i) )
+        num_workers = 4
+        result = dask.compute(*results, scheduler="processes", num_workers=num_workers)
+        return np.sum( result )
+    
+
+    def overlap_cost_function(self, theta, theta_overlap):
+        result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap)
         return result_probs[0]
     
 
@@ -214,33 +263,55 @@ class vqe_spin(HE_ansatz):
 Clase con las funciones de coste para utilizar VQE y VQD
 en un hamiltoniano de espines
 '''
-class vqe_fermihubbard(HE_ansatz):
+class vqe_fermihubbard():
     hamiltonian_object= None
     hopping = 0.0
     potential = 0.0
     spin = 0.5
+    qubits = 0
 
     def __init__(self, params):
         self.qubits = params["sites"]*2
         self.hopping = -params["hopping"]
         self.potential = params["potential"]
         fermi_sentence = 0.0
+        fermi_hopping = 0.0
+        fermi_potential = 0.0
+        
 
         if params["sites"] == 1:
             fermi_sentence +=  self.potential*FermiC(0)*FermiA(0)*FermiC(1)*FermiA(1)
         else:
             for i in range(params["sites"]-1):
-                fermi_sentence +=  self.hopping*FermiC(2*i)*FermiA(2*i +2) + self.hopping*FermiC(2*i +2)*FermiA(2*i)
-                fermi_sentence +=  self.hopping*FermiC(2*i+1)*FermiA(2*i +3) + self.hopping*FermiC(2*i +3)*FermiA(2*i +1)  
-                fermi_sentence +=  self.potential*FermiC(2*i)*FermiA(2*i)*FermiC(2*i +1)*FermiA(2*i +1)
+                if self.hopping != 0.0:
+                    fermi_hopping +=  FermiC(2*i)*FermiA(2*i +2) + FermiC(2*i +2)*FermiA(2*i)
+                    fermi_hopping +=  FermiC(2*i+1)*FermiA(2*i +3) + FermiC(2*i +3)*FermiA(2*i +1)  
+                
+            for i in range(params["sites"]):
+                if self.potential != 0.0:
+                    fermi_potential += FermiC(2*i)*FermiA(2*i)*FermiC(2*i +1)*FermiA(2*i +1)
 
             if params["pattern"] == "close" and params["sites"] != 2:
                 qsite = 2*(params["sites"]-1)
-                fermi_sentence +=  self.hopping*FermiC(0)*FermiA(qsite) + self.hopping*FermiC(qsite)*FermiA(0)
-                fermi_sentence +=  self.hopping*FermiC(1)*FermiA(qsite+1) + self.hopping*FermiC(qsite+1)*FermiA(1) 
+                fermi_hopping +=  FermiC(0)*FermiA(qsite) + FermiC(qsite)*FermiA(0)
+                fermi_hopping +=  FermiC(1)*FermiA(qsite+1) + FermiC(qsite+1)*FermiA(1) 
+
+        fermi_sentence = -self.hopping*fermi_hopping + self.potential*fermi_potential
+
 
         coeff, terms = qml.jordan_wigner( fermi_sentence, ps=True).hamiltonian().terms()
+        to_delete = []
+        for i,c in enumerate(coeff):
+            if c==0.0:
+                to_delete.append(i)
+        
+        to_delete = -np.sort(-np.array(to_delete))
+        for index in to_delete:
+            coeff.pop(index)
+            terms.pop(index)
+
         terms, coeff = qml.pauli.group_observables(observables=terms,coefficients=np.real(coeff), grouping_type='qwc', method='rlf')
+        
         Pauli_terms = []
         for group in terms:
             aux = []
@@ -250,7 +321,7 @@ class vqe_fermihubbard(HE_ansatz):
             Pauli_terms.append(aux)
 
         self.hamiltonian_object = Pauli_terms
-        self.coeff_object = np.hstack(coeff)
+        self.coeff_object = coeff
         self.parity_terms = np.array([ parity(i, self.spin, self.qubits) for i in range(2**self.qubits) ])
         return
     
@@ -263,18 +334,46 @@ class vqe_fermihubbard(HE_ansatz):
         return
     
 
-    def cost_function(self, theta, state):
+    def process_group(self, theta, i):
         expval = []
-        for i,group in enumerate(self.hamiltonian_object):
-            result_probs = self.node(theta = theta, obs = group, characteristic=self.groups_caractericts[i], state= state)
-            for k,probs in enumerate(result_probs):
-                if is_identity(group[k]):
-                    expval.append(1.0)
-                else:
-                    expval.append( np.sum(probs*self.parity_terms[:probs.shape[0]]) )
-        return np.sum( self.coeff_object*np.array(expval) )
+        term = self.hamiltonian_object[i]
+        charac = self.groups_caractericts[i]
+
+        result_probs = self.node(theta=theta, obs=term, characteristic=charac)
+        for k, probs in enumerate(result_probs):
+            if is_identity(term[k]):
+                expval.append( np.sum( probs ) )
+            else:
+                expval.append( np.sum( probs * self.parity_terms[:probs.shape[0]] ) )
+
+        result = self.coeff_object[i]*np.array(expval)
+        return np.sum(result)
+    
+
+    def cost_function(self, theta):
+        results = []
+        for i in range(len(self.hamiltonian_object)):
+            results.append( self.process_group(theta, i) )
+        return np.sum( results )
+
+
+    def cost_function_parallel(self, theta):
+        results = []
+        for i in range(len(self.hamiltonian_object)):
+            results.append( dask.delayed(self.process_group)(theta, i) )
+        num_workers = 4
+        result = dask.compute(*results, scheduler="processes", num_workers=num_workers)
+        return np.sum( result )
     
     
-    def overlap_cost_function(self, theta, theta_overlap, state, state_overlap):
-        result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap, state= state, state_overlap=state_overlap)
-        return result_probs[0]
+    def overlap_cost_function(self, theta, theta_overlap):
+        result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap)
+        aux1 = result_probs[:self.qubits]
+        aux2 = result_probs[self.qubits:2*self.qubits]
+        expval1 = []
+        expval2 = []
+
+        for i, term in enumerate(aux1):
+            expval1.append( term[0] )
+            expval2.append( aux2[i][0] )
+        return 2*np.abs( 0.5 - np.sum( np.array(expval1)*np.array(expval2) )  )

@@ -2,7 +2,7 @@ from quantumsim.ansatz import *
 from quantumsim.optimizers.funciones import *
 import itertools
 
-class vqt_spin(HE_ansatz):
+class vqt_spin(he_ansatz):
     hamiltonian_object = None
     groups_caractericts = None
     coeff_object = None

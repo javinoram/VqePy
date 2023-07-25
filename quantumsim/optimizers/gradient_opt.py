@@ -15,52 +15,62 @@ class gradiend_optimizer():
     maxiter = 100
     theta_optimizer = None
     x_optimizer = None
+    tensor_metric = None
     tol = 1e-6
     number = 0
+    begin_state= None
 
     def __init__(self, params):
         self.number = params["number"]
-        if params["tol"]:
+
+        if 'tol' in params:
             self.tol = params["tol"]
         
-        if params["maxiter"]:
+        if 'maxiter' in params:
             self.maxiter = params["maxiter"]
 
-        if params["step_theta"]:
-            self.theta_optimizer = qml.GradientDescentOptimizer(stepsize=params["step_theta"])
+        if 'theta' in params:
+            if params['theta'][0] == "generic":
+                self.theta_optimizer = qml.GradientDescentOptimizer(stepsize=params['theta'][1])
+            elif params['theta'][0] == "adam":
+                self.theta_optimizer = qml.AdamOptimizer(stepsize=params['theta'][1])
+            elif params['theta'][0] == "adagrad":
+                self.theta_optimizer = qml.AdagradOptimizer(stepsize=params['theta'][1])
 
-        if params["step_x"]:
-            self.x_optimizer = qml.GradientDescentOptimizer(stepsize=params["step_x"])
+        if 'x' in params:
+            if params['x'][0] == "generic":
+                self.x_optimizer = qml.GradientDescentOptimizer(stepsize=params['x'][1])
+            elif params['x'][0] == "adam":
+                self.x_optimizer = qml.AdamOptimizer(stepsize=params['x'][1])
+            elif params['x'][0] == "adagrad":
+                self.x_optimizer = qml.AdagradOptimizer(stepsize=params['x'][1])
+        
+        self.begin_state = np.random.random( size=self.number )*(np.pi/180.0)
 
-    def VQE(self, cost_function, qubits):
 
-        #theta = np.array( [0.0  for _ in range(self.number)], requires_grad=True)
-        theta = np.array( [np.random.randint(314)/100.0  for _ in range(self.number)], requires_grad=True)
-        #state =  qml.qchem.hf_state(int(qubits/2), qubits)
-        state = [0 for i in range(qubits)]
-        energy = [cost_function(theta, state)]
+
+    def VQE(self, cost_function):
+        theta = self.begin_state
+        energy = [cost_function(theta)]
         theta_evol = [theta]
-
-        def cost_aux(x): 
-            result = cost_function(x, state) 
-            return result
 
         for _ in range(self.maxiter):
             theta.requires_grad = True
-            theta = self.theta_optimizer.step(cost_aux, theta)
-            energy.append(cost_function(theta, state))
+            #print("+1")
+            theta = self.theta_optimizer.step(cost_function, theta)
+            energy.append(cost_function(theta))
+            print(energy[-1])
             theta_evol.append(theta)
             prev_energy = energy[len(energy)-2]
-
             conv = np.abs(energy[-1] - prev_energy)
             if conv <= self.tol:
                 break
         return energy, theta
            
-    def OS(self, cost_function, x, grad):
-        energy = []
-        theta = np.array( [0.0  for _ in range(self.number)], requires_grad=True)
 
+
+    def OS(self, cost_function, x, grad):
+        theta = self.begin_state
         for _ in range(self.maxiter):
             theta.requires_grad = True
             x.requires_grad = False
@@ -72,34 +82,31 @@ class gradiend_optimizer():
 
             if np.max(grad(theta, x)) <= self.tol:
                 break
-
-        return energy, np.concatenate((x,theta), axis=0)
+        return np.concatenate((x,theta), axis=0)
     
-    def VQD(self, cost_function, overlap_cost_function, k, qubits):
+    
+    def VQD(self, cost_function, overlap_cost_function, k):
         previous_theta = []
         energy_final = [] 
 
-        combos = itertools.product([0, 1], repeat=qubits)
-        s = [list(c) for c in combos]
-
         for i in range(k):
-
             def cost_aux(x): 
-                result = cost_function(x, s[i]) 
+                result = cost_function(x) 
                 for previous in previous_theta:
-                    result += 5*overlap_cost_function(x, previous, s[i])
+                    result += 10*overlap_cost_function(x, previous)
                 return result
         
             print("state ", i+1)
             self.nit = 0
-            #theta = np.array( [np.random.randint(314)/100.0  for _ in range(self.number)], requires_grad=True)
-            theta = np.array( [0.0  for _ in range(self.number)], requires_grad=True)
-            energy = [cost_function(theta, s[i])]
+
+            
+            theta = self.begin_state
+            energy = [cost_function(theta)]
             theta_evol = [theta]
             for _ in range(self.maxiter):
                 theta.requires_grad = True
                 theta = self.theta_optimizer.step(cost_aux, theta)
-                energy.append(cost_function(theta, s[i]))
+                energy.append(cost_function(theta))
                 theta_evol.append(theta)
                 prev_energy = energy[len(energy)-2]
 
@@ -109,3 +116,34 @@ class gradiend_optimizer():
             energy_final.append( energy[-1] )
             previous_theta.append( theta )
         return energy_final, theta
+    
+
+    def Thermal(self, cost_function, qubits, T):
+        energy = []
+        theta_evol = []
+
+        bounds = []
+        for l in range(2**qubits):
+            bounds.append( ((0,1)) )
+
+        def cost_aux(x): 
+            result = cost_function(x, 1.0/T)
+            if T>=1:
+                result += 10*np.abs(1 - np.sum(x))
+            else:
+                result += np.exp(1.0/T)*np.abs(1 - np.sum(x))
+            energy.append(result)
+            theta_evol.append(x)
+            return result
+        
+        for _ in range(self.maxiter):
+            theta.requires_grad = True
+            theta = self.theta_optimizer.step(cost_aux, theta)
+            energy.append(cost_function(theta))
+            theta_evol.append(theta)
+            prev_energy = energy[len(energy)-2]
+
+            conv = np.abs(energy[-1] - prev_energy)
+            if conv <= self.tol:
+                break
+        return energy, theta
