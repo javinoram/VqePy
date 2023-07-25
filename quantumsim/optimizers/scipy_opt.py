@@ -64,7 +64,6 @@ class scipy_optimizer():
         energy = []
         theta_evol = []
         self.nit = 0
-        #state =  qml.qchem.hf_state(int(qubits/2), qubits)
         state = [0.0 for i in range(qubits)]
 
         def cost_aux(x): 
