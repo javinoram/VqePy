@@ -1,3 +1,2 @@
-from hybrid.thermal import *
-from quantum.thermal import *
-from quantum.time import *
+from .quantum.thermal import *
+from .classic.thermal import *

@@ -16,7 +16,6 @@ class scipy_optimizer():
     tol = 1e-6
     nit = 0
     number = 0
-    constrains = None
 
     def __init__(self, params):
         self.number = params["number"]
@@ -36,21 +35,12 @@ class scipy_optimizer():
             print("Maximo numero de iteraciones")
             warnings.warn("Terminating optimization: iteration limit reached", TookTooManyIters)
 
-    def set_constrains(self):
-        aux = []
-        for i in range(self.number):
-            f = lambda x: 2*np.pi - np.abs( x[i] )
-            aux.append( ({'type': 'ineq', 'fun': f}) )
-        self.constrains = aux
-        return 
 
     def VQD(self, cost_function, overlap_cost_function, k, qubits):
         energy = []
         previous_theta = []
-
         combos = itertools.product([0, 1], repeat=qubits)
         s = [list(c) for c in combos]
-        s = sort_states(s)
 
         for i in range(k):  
             print("state ", i+1)
@@ -62,12 +52,10 @@ class scipy_optimizer():
                 return result
         
             self.nit = 0
-            theta = np.array( [np.random.randint(314)/100.0  for _ in range(self.number)], requires_grad=True)
-            #theta = np.array( [0.0  for _ in range(self.number)], requires_grad=True)
+            theta = np.array( [np.random.randint(314)/(100.0)  for _ in range(self.number)], requires_grad=True)
             ops = {'maxiter': self.maxiter}
-            xs = sc.optimize.minimize(cost_aux, theta, method=self.type_method, 
-                    constraints =self.constrains, callback=self.callback, tol=self.tol, options=ops)['x']
-            
+            xs = sc.optimize.minimize(cost_aux, theta, method=self.type_method,
+                    callback=self.callback, tol=self.tol, options=ops)['x']
             energy.append( cost_function(xs, s[0]) )
             previous_theta.append(xs)
         return energy, previous_theta
@@ -77,9 +65,7 @@ class scipy_optimizer():
         theta_evol = []
         self.nit = 0
         #state =  qml.qchem.hf_state(int(qubits/2), qubits)
-        state = [0 if i%2==0 else 1 for i in range(qubits)]
-        print(state)
-
+        state = [0.0 for i in range(qubits)]
 
         def cost_aux(x): 
             result = cost_function(x, state)
@@ -89,8 +75,7 @@ class scipy_optimizer():
         
         ops = {'maxiter': self.maxiter}
         theta = np.array( [np.random.randint(314)/100.0  for _ in range(self.number)], requires_grad=True)
-        theta = sc.optimize.minimize(cost_aux, theta, method=self.type_method, 
-                constraints =self.constrains,  callback=self.callback, tol=self.tol, options=ops)['x']
+        theta = sc.optimize.minimize(cost_aux, theta, method=self.type_method, callback=self.callback, tol=self.tol, options=ops)['x']
         return energy, theta
     
     def OS(self, cost_function, x):
@@ -108,5 +93,27 @@ class scipy_optimizer():
         theta = np.array( [np.random.randint(314)/100.0  for _ in range(self.number)], requires_grad=True)
         theta = sc.optimize.minimize(cost_aux, np.concatenate((x,theta), axis=0), method=self.type_method, 
                 callback=self.callback, tol=self.tol, options=ops)['x']
+        return energy, theta
+    
+    def Thermal(self, cost_function, qubits, T):
+        energy = []
+        theta_evol = []
+        self.nit = 0
+
+        constrains = [{'type': 'eq', 'fun': lambda x: 1 - np.sum(x)}]
+        for l in range(2**qubits):
+            constrains.append( {'type': 'ineq', 'fun': lambda x: 1 - x[l]} )
+            constrains.append( {'type': 'ineq', 'fun': lambda x: x[l]} )
+
+        def cost_aux(x): 
+            result = cost_function(x, 1.0/T)
+            energy.append(result)
+            theta_evol.append(x)
+            return result
+        
+        ops = {'maxiter': self.maxiter}
+        theta = np.array( [1.0/(2**qubits)  for _ in range(2**qubits)], requires_grad=True)
+        theta = sc.optimize.minimize(cost_aux, theta, method=self.type_method, 
+                constraints=constrains, callback=self.callback, tol=self.tol, options=ops)['x']
         return energy, theta
 
