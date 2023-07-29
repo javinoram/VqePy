@@ -8,7 +8,7 @@ import math
 Clase con las funciones de coste para utilizar VQE y VQD en 
 un hamiltoniano molecular
 '''
-class vqe_molecular(HE_ansatz):
+class vqe_molecular(upccgsd_ansatz):
     hamiltonian_object= None
     groups_caractericts = None
     coeff_object = None
@@ -22,25 +22,25 @@ class vqe_molecular(HE_ansatz):
     spin = 0.5
 
     def __init__(self, symbols, coordinates, params= None):
-        if params['mapping']:
+        if 'mapping' in params:
             if params['mapping'] in ("jordan_wigner"):
                 self.mapping = params['mapping']
             else:
                 raise Exception("Mapping no valido, considere jordan_wigner")
             
-        if params['charge']:
+        if 'charge' in params:
             self.charge = params['charge']
 
-        if params['mult']:
+        if 'mult' in params:
             self.mult = params['mult']
 
-        if params['basis']:
+        if 'basis' in params:
             if params['basis'] in ("sto-3g", "6-31g", "6-311g", "cc-pvdz"):
                 self.basis = params['basis']
             else:
                 raise Exception("Base no valida, considere sto-3g, 6-31g, 6-311g, cc-pvdz")
         
-        if params['method']:
+        if 'method' in params:
             if params['method'] in ("pyscf", "dhf"):
                 self.method = params['method']
             else:
@@ -58,9 +58,9 @@ class vqe_molecular(HE_ansatz):
         coeff, terms = aux_h.terms()
         del aux_h
 
-        terms, coeff = qml.pauli.group_observables(observables=terms,coefficients=coeff, grouping_type='qwc', method='rlf')
-        Pauli_terms = []
-        for group in terms:
+        terms, coeff = qml.pauli.group_observables(observables=terms, coefficients=coeff, grouping_type='qwc', method='rlf')
+        Pauli_terms = [] 
+        for group in terms: 
             aux = []
             for term in group:
                 string = Pauli_function(term, self.qubits)
@@ -81,10 +81,10 @@ class vqe_molecular(HE_ansatz):
         return
     
 
-    def cost_function(self, theta, state):
+    def cost_function(self, theta):
         expval = []
         for i,group in enumerate(self.hamiltonian_object):
-            result_probs = self.node(theta = theta, obs = group, characteristic=self.groups_caractericts[i], state= state)
+            result_probs = self.node(theta = theta, obs = group, characteristic=self.groups_caractericts[i])
             for k,probs in enumerate(result_probs):
                 if is_identity(group[k]):
                     expval.append(1.0)
