@@ -21,8 +21,8 @@ class quantum_thermal(HE_ansatz_thermal):
         
     def expected_value(self):
         expval = []
-        for i,state in enumerate(self.states):
-            result_prob = self.node(theta = self.states[i], state=[0 for j in range(self.qubits)])
+        for state in self.states:
+            result_prob = self.node( theta = state )
             expval.append( np.sum(result_prob*self.parity_terms[:result_prob.shape[0]]) )
         return np.array(expval)
     
@@ -33,10 +33,7 @@ class quantum_thermal(HE_ansatz_thermal):
             result += -i * np.log(i)
         return result
 
-
     def cost_function(self, dist, beta):
-        #expval = self.expected_value()
-        #entropy = np.sum(-dist*np.log(dist))
         entropy = self.entropy(dist)
         result = np.sum( self.energy*dist )
         final_cost = beta * result - entropy

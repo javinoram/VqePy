@@ -70,12 +70,9 @@ class upccgsd_ansatz():
         
         for j, index in enumerate(characteristic):
             if index == 'X':
-                for k in range(self.correction):
-                    qml.Hadamard(wires=[self.correction*j + k])
+                qml.Hadamard(wires=[j])
             elif index == 'Y':
-                for k in range(self.correction):
-                    qml.S(wires=[self.correction*j + k])
-                    qml.Hadamard(wires=[self.correction*j + k])
+                qml.Hadamard(wires=[j])
             else: 
                 pass
         return [qml.probs(wires=[0]) if is_identity(term) else qml.probs(wires=find_different_indices(term, "I") ) for term in obs ]

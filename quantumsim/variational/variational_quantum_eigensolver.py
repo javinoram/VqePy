@@ -201,10 +201,10 @@ class vqe_spin(HE_ansatz):
         return
     
     
-    def cost_function(self, theta, state):
+    def cost_function(self, theta):
         expval = []
         for i,group in enumerate(self.hamiltonian_object):
-            result_probs = self.node(theta = theta, obs = group, characteristic=self.groups_caractericts[i], state= state)
+            result_probs = self.node(theta = theta, obs = group, characteristic=self.groups_caractericts[i])
             for k,probs in enumerate(result_probs):
                 if is_identity(group[k]):
                     expval.append(1.0)
@@ -213,8 +213,8 @@ class vqe_spin(HE_ansatz):
         return np.sum( self.coeff_object*np.array(expval) )
     
 
-    def overlap_cost_function(self, theta, theta_overlap, state, state_overlap):
-        result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap, state= state, state_overlap=state_overlap)
+    def overlap_cost_function(self, theta, theta_overlap):
+        result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap)
         return result_probs[0]
     
 
@@ -280,7 +280,8 @@ class vqe_fermihubbard(upccgsd_ansatz):
                     expval.append(1.0)
                 else:
                     expval.append( np.sum(probs*self.parity_terms[:probs.shape[0]]) )
-        return np.sum( self.coeff_object*np.array(expval) )
+        result = np.sum( self.coeff_object*np.array(expval) )
+        return result
     
     
     def overlap_cost_function(self, theta, theta_overlap):

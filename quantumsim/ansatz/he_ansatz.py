@@ -131,9 +131,8 @@ class HE_ansatz():
         return
     
 
-    def circuit(self, theta, obs, characteristic, state):
-        state = np.hstack([[i for j in range(self.correction)] for i in state])
-        qml.BasisState(state, wires=range(self.qubits*self.correction))
+    def circuit(self, theta, obs, characteristic):
+        qml.BasisState([0 for i in range(self.qubits*self.correction)], wires=range(self.qubits*self.correction))
         rotation_number = self.qubits
         for k in range(0, self.repetition):
             params = theta[k*rotation_number:(k+1)*rotation_number]
@@ -152,9 +151,8 @@ class HE_ansatz():
                 pass
         return [qml.probs(wires=[0]) if is_identity(term) else qml.probs(wires=find_different_indices(term, "I") ) for term in obs ]
 
-    def circuit_overlap(self, theta, theta_overlap, state, state_overlap):
-        state = np.hstack( [[i for j in range(self.correction)] for i in state] )
-        qml.BasisState(state, wires=range(self.qubits*self.correction))
+    def circuit_overlap(self, theta, theta_overlap):
+        qml.BasisState([0 for i in range(self.qubits*self.correction)], wires=range(self.qubits*self.correction))
         rotation_number = self.qubits
         for k in range(0, self.repetition):
             params = theta[k*rotation_number:(k+1)*rotation_number]
@@ -166,12 +164,6 @@ class HE_ansatz():
             params = -np.array(theta_overlap[k*rotation_number:(k+1)*rotation_number])[::-1]
             self.non_local_gates(1)
             self.single_rotation(params)
-        
-        for k in range(len(state_overlap)):
-            if state_overlap[k]==1:
-                qml.X(k)
-            else:
-                pass    
         return qml.probs(wires=[i for i in range(self.qubits)])
 
 
@@ -271,8 +263,8 @@ class HE_ansatz_thermal():
         return
     
     
-    def circuit(self, theta, state):
-        qml.BasisState(state, wires=range(self.qubits*self.correction))
+    def circuit(self, theta):
+        qml.BasisState([0 for i in range(self.qubits*self.correction)], wires=range(self.qubits*self.correction))
         rotation_number = self.qubits
         for k in range(0, self.repetition):
             params = theta[k*rotation_number:(k+1)*rotation_number]

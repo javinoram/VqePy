@@ -9,7 +9,7 @@ from quantumsim.optimizers import *
 class TookTooManyIters(Warning):
     pass
 
-class scipy_optimizer():
+class scipy_opt():
     maxiter = 100
     type_method = "SLSQP"
     tol = 1e-6
@@ -100,20 +100,23 @@ class scipy_optimizer():
         theta_evol = []
         self.nit = 0
 
-        constrains = [{'type': 'eq', 'fun': lambda x: 1 - np.sum(x)}]
+        bounds = []
         for l in range(2**qubits):
-            constrains.append( {'type': 'ineq', 'fun': lambda x: 1 - x[l]} )
-            constrains.append( {'type': 'ineq', 'fun': lambda x: x[l]} )
+            bounds.append( ((0,1)) )
 
         def cost_aux(x): 
             result = cost_function(x, 1.0/T)
+            if T>=1:
+                result += 10*np.abs(1 - np.sum(x))
+            else:
+                result += np.exp(1.0/T)*np.abs(1 - np.sum(x))
             energy.append(result)
             theta_evol.append(x)
             return result
         
         ops = {'maxiter': self.maxiter}
-        theta = np.array( [1.0/(2**qubits)  for _ in range(2**qubits)], requires_grad=True)
+        theta = np.random.random( size=self.number )
         theta = sc.optimize.minimize(cost_aux, theta, method=self.type_method, 
-                constraints=constrains, callback=self.callback, tol=self.tol, options=ops)['x']
+                bounds=bounds, callback=self.callback, tol=self.tol, options=ops)['x']
         return energy, theta
 
