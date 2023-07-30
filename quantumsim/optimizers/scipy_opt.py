@@ -3,7 +3,6 @@ import math
 import scipy.linalg as la
 import scipy as sc
 import warnings
-import itertools
 from pennylane import numpy as np
 from quantumsim.optimizers import *
 
@@ -20,13 +19,13 @@ class scipy_optimizer():
     def __init__(self, params):
         self.number = params["number"]
 
-        if params["tol"]:
+        if 'tol' in params:
             self.tol = params["tol"]
         
-        if params["maxiter"]:
+        if 'maxiter' in params:
             self.maxiter = params["maxiter"]
         
-        if params["type"]:
+        if 'type' in params:
             self.type_method = params["type"]
 
     def callback(self, x):
@@ -36,59 +35,24 @@ class scipy_optimizer():
             warnings.warn("Terminating optimization: iteration limit reached", TookTooManyIters)
 
 
-    def VQD(self, cost_function, overlap_cost_function, k, qubits):
-        energy = []
-        previous_theta = []
-        #combos = itertools.product([0, 1], repeat=qubits)
-        #s = [list(c) for c in combos]
-        begin_state = [0 for _ in range(qubits)]
-
-        for i in range(k):  
-            print("state ", i+1)
-
-            def cost_aux(x): 
-                result = cost_function(x, begin_state) 
-                for j, previous in enumerate(previous_theta):
-                    result += 10*overlap_cost_function(x, previous, begin_state, begin_state)
-                return result
-        
-            self.nit = 0
-            theta = np.array( [np.random.randint(314)/(100.0)  for _ in range(self.number)], requires_grad=True)
-            ops = {'maxiter': self.maxiter}
-            xs = sc.optimize.minimize(cost_aux, theta, method=self.type_method,
-                    callback=self.callback, tol=self.tol, options=ops)['x']
-            energy.append( cost_function(xs, begin_state) )
-            previous_theta.append(xs)
-        return energy, previous_theta
     
-    def VQE(self, cost_function, qubits, symbols= None):
+    def VQE(self, cost_function):
         energy = []
         theta_evol = []
         self.nit = 0
 
-        if symbols:
-            electrons = 0.0
-            for element in symbols:
-                electrons += eletrons_per_element[element]
-            state = qml.qchem.hf_state(electrons=electrons, orbitals=qubits)
-        else:
-            state = [0 for i in range(qubits)]
-
-        print(state)
-
         def cost_aux(x): 
-            result = cost_function(x, state)
-            print(result)
+            result = cost_function(x)
             energy.append(result)
             theta_evol.append(x)
             return result
         
         ops = {'maxiter': self.maxiter}
-        #theta = np.array( [np.random.randint(314)/100.0  for _ in range(self.number)], requires_grad=True)
         theta = np.random.random( size=self.number )
-        print(theta)
         theta = sc.optimize.minimize(cost_aux, theta, method=self.type_method, callback=self.callback, tol=self.tol, options=ops)['x']
         return energy, theta
+    
+
     
     def OS(self, cost_function, x):
         energy = []
@@ -102,11 +66,33 @@ class scipy_optimizer():
             return result
         
         ops = {'maxiter': self.maxiter}
-        theta = np.array( [np.random.randint(314)/100.0  for _ in range(self.number)], requires_grad=True)
+        theta = theta = np.random.random( size=self.number )
         theta = sc.optimize.minimize(cost_aux, np.concatenate((x,theta), axis=0), method=self.type_method, 
                 callback=self.callback, tol=self.tol, options=ops)['x']
         return energy, theta
     
+
+    def VQD(self, cost_function, overlap_cost_function, k):
+        energy = []
+        previous_theta = []
+
+        for i in range(k):  
+            print("state ", i+1)
+
+            def cost_aux(x): 
+                result = cost_function(x) 
+                for j, previous in enumerate(previous_theta):
+                    result += 10*overlap_cost_function(x, previous)
+                return result
+        
+            self.nit = 0
+            theta = np.random.random( size=self.number )
+            ops = {'maxiter': self.maxiter}
+            xs = sc.optimize.minimize(cost_aux, theta, method=self.type_method,
+                    callback=self.callback, tol=self.tol, options=ops)['x']
+            energy.append( cost_function(xs) )
+            previous_theta.append(xs)
+        return energy, previous_theta
 
 
     def Thermal(self, cost_function, qubits, T):

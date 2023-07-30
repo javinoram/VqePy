@@ -61,7 +61,6 @@ class gradiend_optimizer():
 
 
     def OS(self, cost_function, x, grad):
-        energy = []
         theta = np.random.random( size=self.number )
         for _ in range(self.maxiter):
             theta.requires_grad = True
@@ -74,34 +73,31 @@ class gradiend_optimizer():
 
             if np.max(grad(theta, x)) <= self.tol:
                 break
-        return energy, np.concatenate((x,theta), axis=0)
+        return np.concatenate((x,theta), axis=0)
     
     
-    def VQD(self, cost_function, overlap_cost_function, k, qubits):
+    def VQD(self, cost_function, overlap_cost_function, k):
         previous_theta = []
         energy_final = [] 
 
-        combos = itertools.product([0, 1], repeat=qubits)
-        s = [list(c) for c in combos]
-
         for i in range(k):
-
             def cost_aux(x): 
-                result = cost_function(x, s[i]) 
+                result = cost_function(x) 
                 for previous in previous_theta:
-                    result += 5*overlap_cost_function(x, previous, s[i])
+                    result += 5*overlap_cost_function(x, previous)
                 return result
         
             print("state ", i+1)
             self.nit = 0
-            #theta = np.array( [np.random.randint(314)/100.0  for _ in range(self.number)], requires_grad=True)
-            theta = np.array( [0.0  for _ in range(self.number)], requires_grad=True)
-            energy = [cost_function(theta, s[i])]
+            theta = np.random.random( size=self.number )
+            
+            
+            energy = [cost_function(theta)]
             theta_evol = [theta]
             for _ in range(self.maxiter):
                 theta.requires_grad = True
                 theta = self.theta_optimizer.step(cost_aux, theta)
-                energy.append(cost_function(theta, s[i]))
+                energy.append(cost_function(theta))
                 theta_evol.append(theta)
                 prev_energy = energy[len(energy)-2]
 

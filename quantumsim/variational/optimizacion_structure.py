@@ -3,7 +3,7 @@ from quantumsim.optimizers import *
 from pennylane import qchem
 from pennylane import numpy as np
 
-class optimization_structure(HE_ansatz):
+class structure_molecular(upccgsd_ansatz):
     symbols = None
     coordinates = None
 
@@ -92,7 +92,7 @@ class optimization_structure(HE_ansatz):
                 
                 expval = []
                 for i,group in enumerate(Pauli_terms):
-                    result_probs = self.node(theta = theta, obs = group, characteristic=groups_caractericts[i], state=self.begin_state)
+                    result_probs = self.node(theta = theta, obs = group, characteristic=groups_caractericts[i])
                     for k,probs in enumerate(result_probs):
                         if is_identity(group[k]):
                             expval.append(1.0)
@@ -121,10 +121,12 @@ class optimization_structure(HE_ansatz):
             
         expval = []
         for i,group in enumerate(Pauli_terms):
-            result_probs = self.node(theta = theta, obs = group, characteristic=groups_caractericts[i], state=self.begin_state)
+            result_probs = self.node(theta = theta, obs = group, characteristic=groups_caractericts[i])
             for k,probs in enumerate(result_probs):
                 if is_identity(group[k]):
                     expval.append(1.0)
                 else:
                     expval.append( np.sum(probs*self.parity_terms[:probs.shape[0]]) )
-        return np.sum( coeff_object*np.array(expval) )
+
+        result = np.sum( coeff_object*np.array(expval) )
+        return result

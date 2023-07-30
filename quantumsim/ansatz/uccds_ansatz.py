@@ -2,7 +2,7 @@ import pennylane as qml
 from pennylane import numpy as np
 from quantumsim.optimizers.funciones import *
 
-class upccgsd_ansatz():
+class uccds_ansatz():
     def circuit(self, theta, obs):
         pass
 
@@ -17,6 +17,8 @@ class upccgsd_ansatz():
     qubits = 0
     repetition = 0
     begin_state = None
+    singles = None
+    doubles = None
 
     def set_device(self, params) -> None:
         self.base = params['base']
@@ -56,17 +58,15 @@ class upccgsd_ansatz():
     
 
     
-    def set_state(self, electrons, type="hf"):
+    def set_state(self, electrons):
         self.begin_state = qml.qchem.hf_state(electrons=electrons, orbitals=self.qubits)
+        singles, doubles = qml.qchem.excitations(electrons, self.qubits)
+        self.singles, self.doubles = qml.qchem.excitations_to_wires(singles, doubles)
 
 
 
     def circuit(self, theta, obs, characteristic):
-        theta = theta.reshape( qml.kUpCCGSD.shape(k=self.repetition, 
-            n_wires=self.qubits, delta_sz=0) )
-        
-        qml.kUpCCGSD(theta, wires=range(self.qubits),
-            k=self.repetition, delta_sz=0, init_state=self.begin_state)
+        qml.UCCSD(theta, range(self.qubits), self.singles, self.doubles, self.begin_state)
         
         for j, index in enumerate(characteristic):
             if index == 'X':
@@ -82,18 +82,15 @@ class upccgsd_ansatz():
     
 
     def swap_test(self, theta, theta_overlap):
-        theta = theta.reshape( qml.kUpCCGSD.shape(k=self.repetition, 
-            n_wires=self.qubits, delta_sz=0) )
+        #state = np.concatenate((self.begin_state, self.begin_state), axis=0)
+        #qml.BasisStatePreparation(state, wires=range(2*self.qubits))
+
+        qml.UCCSD(weights= theta, wires=range(self.qubits), 
+                s_wires=self.singles, d_wires=self.doubles, init_state=self.begin_state)
         
-        theta_overlap = theta_overlap.reshape( qml.kUpCCGSD.shape(k=self.repetition, 
-            n_wires=self.qubits, delta_sz=0) )
-        
-        qml.kUpCCGSD(theta, wires=range(self.qubits),
-            k=self.repetition, delta_sz=0, init_state=self.begin_state)
-        
-        qml.kUpCCGSD(theta_overlap, wires=[self.qubits+i for i in range(self.qubits)],
-            k=self.repetition, delta_sz=0, init_state=self.begin_state)
-        
+        qml.UCCSD(weights=theta_overlap, wires=range(self.qubits),#[self.qubits+i for i in range(self.qubits)], 
+                s_wires=self.singles, d_wires=self.doubles, init_state=None)
+
         for i in range(self.qubits):
             qml.CNOT(wires=[i,i+self.qubits])
             qml.Hadamard(wires=[i])

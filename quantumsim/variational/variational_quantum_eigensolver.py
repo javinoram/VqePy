@@ -9,6 +9,7 @@ Clase con las funciones de coste para utilizar VQE y VQD en
 un hamiltoniano molecular
 '''
 class vqe_molecular(upccgsd_ansatz):
+#class vqe_molecular(uccds_ansatz):
     hamiltonian_object= None
     groups_caractericts = None
     coeff_object = None
@@ -19,7 +20,6 @@ class vqe_molecular(upccgsd_ansatz):
     mult= 1
     basis='sto-3g'
     method='dhf'
-    spin = 0.5
 
     def __init__(self, symbols, coordinates, params= None):
         if 'mapping' in params:
@@ -93,9 +93,17 @@ class vqe_molecular(upccgsd_ansatz):
         return np.sum( self.coeff_object*np.array(expval) )
     
 
-    def overlap_cost_function(self, theta, theta_overlap, state, state_overlap):
-        result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap, state= state, state_overlap=state_overlap)
-        return result_probs[0]
+    def overlap_cost_function(self, theta, theta_overlap):
+        result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap)
+        aux1 = result_probs[:self.qubits]
+        aux2 = result_probs[self.qubits:2*self.qubits]
+        expval1 = []
+        expval2 = []
+
+        for i, term in enumerate(aux1):
+            expval1.append( term[0] )
+            expval2.append( aux2[i][0] )
+        return 2*np.abs( 0.5 - np.sum( np.array(expval1)*np.array(expval2) )  )
 
 
 
@@ -214,7 +222,7 @@ class vqe_spin(HE_ansatz):
 Clase con las funciones de coste para utilizar VQE y VQD
 en un hamiltoniano de espines
 '''
-class vqe_fermihubbard(HE_ansatz):
+class vqe_fermihubbard(upccgsd_ansatz):
     hamiltonian_object= None
     hopping = 0.0
     potential = 0.0
@@ -263,10 +271,10 @@ class vqe_fermihubbard(HE_ansatz):
         return
     
 
-    def cost_function(self, theta, state):
+    def cost_function(self, theta):
         expval = []
         for i,group in enumerate(self.hamiltonian_object):
-            result_probs = self.node(theta = theta, obs = group, characteristic=self.groups_caractericts[i], state= state)
+            result_probs = self.node(theta = theta, obs = group, characteristic=self.groups_caractericts[i])
             for k,probs in enumerate(result_probs):
                 if is_identity(group[k]):
                     expval.append(1.0)
@@ -275,6 +283,14 @@ class vqe_fermihubbard(HE_ansatz):
         return np.sum( self.coeff_object*np.array(expval) )
     
     
-    def overlap_cost_function(self, theta, theta_overlap, state, state_overlap):
-        result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap, state= state, state_overlap=state_overlap)
-        return result_probs[0]
+    def overlap_cost_function(self, theta, theta_overlap):
+        result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap)
+        aux1 = result_probs[:self.qubits]
+        aux2 = result_probs[self.qubits:2*self.qubits]
+        expval1 = []
+        expval2 = []
+
+        for i, term in enumerate(aux1):
+            expval1.append( term[0] )
+            expval2.append( aux2[i][0] )
+        return 2*np.abs( 0.5 - np.sum( np.array(expval1)*np.array(expval2) )  )
