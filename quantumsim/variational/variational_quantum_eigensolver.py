@@ -69,7 +69,7 @@ class vqe_molecular(upccgsd_ansatz):
 
         self.hamiltonian_object = Pauli_terms
         self.coeff_object = np.hstack(coeff)
-        self.parity_terms = np.array([ parity(i, self.spin, self.qubits) for i in range(2**self.qubits) ]) 
+        self.parity_terms = np.array([ parity(i, 0.5, self.qubits) for i in range(2**self.qubits) ]) 
         return
     
 

@@ -9,7 +9,7 @@ from quantumsim.optimizers import *
 class TookTooManyIters(Warning):
     pass
 
-class scipy_opt():
+class scipy_optimizer():
     maxiter = 100
     type_method = "SLSQP"
     tol = 1e-6
