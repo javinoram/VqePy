@@ -3,13 +3,14 @@ from quantumsim.optimizers.funciones import *
 from pennylane import qchem
 from pennylane import FermiC, FermiA
 import math
+import dask
+from autograd.numpy.numpy_boxes import ArrayBox
 
 '''
 Clase con las funciones de coste para utilizar VQE y VQD en 
 un hamiltoniano molecular
 '''
-class vqe_molecular(upccgsd_ansatz):
-#class vqe_molecular(uccds_ansatz):
+class vqe_molecular():
     hamiltonian_object= None
     groups_caractericts = None
     coeff_object = None
@@ -20,6 +21,9 @@ class vqe_molecular(upccgsd_ansatz):
     mult= 1
     basis='sto-3g'
     method='dhf'
+
+    node = None
+    node_overlap = None
 
     def __init__(self, symbols, coordinates, params= None):
         if 'mapping' in params:
@@ -68,7 +72,8 @@ class vqe_molecular(upccgsd_ansatz):
             Pauli_terms.append(aux)
 
         self.hamiltonian_object = Pauli_terms
-        self.coeff_object = np.hstack(coeff)
+        #self.coeff_object = np.hstack(coeff)
+        self.coeff_object = coeff
         self.parity_terms = np.array([ parity(i, 0.5, self.qubits) for i in range(2**self.qubits) ]) 
         return
     
@@ -79,18 +84,38 @@ class vqe_molecular(upccgsd_ansatz):
             aux_char.append( group_string(group) )
         self.groups_caractericts = aux_char
         return
+
+
+    def process_group(self, theta, i):
+        expval = []
+        term = self.hamiltonian_object[i]
+        charac = self.groups_caractericts[i]
+
+        result_probs = self.node(theta=theta, obs=term, characteristic=charac)
+        for k, probs in enumerate(result_probs):
+            if is_identity(term[k]):
+                expval.append( np.sum( probs ) )
+            else:
+                expval.append( np.sum( probs * self.parity_terms[:probs.shape[0]] ) )
+
+        result = self.coeff_object[i]*np.array(expval)
+        return np.sum(result)
     
 
     def cost_function(self, theta):
-        expval = []
-        for i,group in enumerate(self.hamiltonian_object):
-            result_probs = self.node(theta = theta, obs = group, characteristic=self.groups_caractericts[i])
-            for k,probs in enumerate(result_probs):
-                if is_identity(group[k]):
-                    expval.append(1.0)
-                else:
-                    expval.append( np.sum(probs*self.parity_terms[:probs.shape[0]]) )
-        return np.sum( self.coeff_object*np.array(expval) )
+        results = []
+        for i in range(len(self.hamiltonian_object)):
+            results.append( self.process_group(theta, i) )
+        return np.sum( results )
+
+
+    def cost_function_parallel(self, theta):
+        results = []
+        for i in range(len(self.hamiltonian_object)):
+            results.append( dask.delayed(self.process_group)(theta, i) )
+        num_workers = 4
+        result = dask.compute(*results, scheduler="processes", num_workers=num_workers)
+        return np.sum( result )
     
 
     def overlap_cost_function(self, theta, theta_overlap):
@@ -111,7 +136,7 @@ class vqe_molecular(upccgsd_ansatz):
 Clase con las funciones de coste para utilizar VQE y VQD
 en un hamiltoniano de espines
 '''
-class vqe_spin(HE_ansatz):
+class vqe_spin():
     hamiltonian_object = None
     groups_caractericts = None
     coeff_object = None
@@ -201,16 +226,36 @@ class vqe_spin(HE_ansatz):
         return
     
     
-    def cost_function(self, theta):
+    def process_group(self, theta, i):
         expval = []
-        for i,group in enumerate(self.hamiltonian_object):
-            result_probs = self.node(theta = theta, obs = group, characteristic=self.groups_caractericts[i])
-            for k,probs in enumerate(result_probs):
-                if is_identity(group[k]):
-                    expval.append(1.0)
-                else:
-                    expval.append( np.sum(probs*self.parity_terms[:probs.shape[0]]) )
-        return np.sum( self.coeff_object*np.array(expval) )
+        term = self.hamiltonian_object[i]
+        charac = self.groups_caractericts[i]
+
+        result_probs = self.node(theta=theta, obs=term, characteristic=charac)
+        for k, probs in enumerate(result_probs):
+            if is_identity(term[k]):
+                expval.append( np.sum( probs ) )
+            else:
+                expval.append( np.sum( probs * self.parity_terms[:probs.shape[0]] ) )
+
+        result = self.coeff_object[i]*np.array(expval)
+        return np.sum(result)
+    
+
+    def cost_function(self, theta):
+        results = []
+        for i in range(len(self.hamiltonian_object)):
+            results.append( self.process_group(theta, i) )
+        return np.sum( results )
+
+
+    def cost_function_parallel(self, theta):
+        results = []
+        for i in range(len(self.hamiltonian_object)):
+            results.append( dask.delayed(self.process_group)(theta, i) )
+        num_workers = 4
+        result = dask.compute(*results, scheduler="processes", num_workers=num_workers)
+        return np.sum( result )
     
 
     def overlap_cost_function(self, theta, theta_overlap):
@@ -222,7 +267,7 @@ class vqe_spin(HE_ansatz):
 Clase con las funciones de coste para utilizar VQE y VQD
 en un hamiltoniano de espines
 '''
-class vqe_fermihubbard(upccgsd_ansatz):
+class vqe_fermihubbard():
     hamiltonian_object= None
     hopping = 0.0
     potential = 0.0
@@ -271,17 +316,36 @@ class vqe_fermihubbard(upccgsd_ansatz):
         return
     
 
-    def cost_function(self, theta):
+    def process_group(self, theta, i):
         expval = []
-        for i,group in enumerate(self.hamiltonian_object):
-            result_probs = self.node(theta = theta, obs = group, characteristic=self.groups_caractericts[i])
-            for k,probs in enumerate(result_probs):
-                if is_identity(group[k]):
-                    expval.append(1.0)
-                else:
-                    expval.append( np.sum(probs*self.parity_terms[:probs.shape[0]]) )
-        result = np.sum( self.coeff_object*np.array(expval) )
-        return result
+        term = self.hamiltonian_object[i]
+        charac = self.groups_caractericts[i]
+
+        result_probs = self.node(theta=theta, obs=term, characteristic=charac)
+        for k, probs in enumerate(result_probs):
+            if is_identity(term[k]):
+                expval.append( np.sum( probs ) )
+            else:
+                expval.append( np.sum( probs * self.parity_terms[:probs.shape[0]] ) )
+
+        result = self.coeff_object[i]*np.array(expval)
+        return np.sum(result)
+    
+
+    def cost_function(self, theta):
+        results = []
+        for i in range(len(self.hamiltonian_object)):
+            results.append( self.process_group(theta, i) )
+        return np.sum( results )
+
+
+    def cost_function_parallel(self, theta):
+        results = []
+        for i in range(len(self.hamiltonian_object)):
+            results.append( dask.delayed(self.process_group)(theta, i) )
+        num_workers = 4
+        result = dask.compute(*results, scheduler="processes", num_workers=num_workers)
+        return np.sum( result )
     
     
     def overlap_cost_function(self, theta, theta_overlap):

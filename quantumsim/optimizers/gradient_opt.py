@@ -18,6 +18,7 @@ class gradiend_optimizer():
     tensor_metric = None
     tol = 1e-6
     number = 0
+    begin_state= None
 
     def __init__(self, params):
         self.number = params["number"]
@@ -33,17 +34,24 @@ class gradiend_optimizer():
                 self.theta_optimizer = qml.GradientDescentOptimizer(stepsize=params['theta'][1])
             elif params['theta'][0] == "adam":
                 self.theta_optimizer = qml.AdamOptimizer(stepsize=params['theta'][1])
+            elif params['theta'][0] == "adagrad":
+                self.theta_optimizer = qml.AdagradOptimizer(stepsize=params['theta'][1])
 
         if 'x' in params:
-            if params['theta'][0] == "generic":
+            if params['x'][0] == "generic":
                 self.x_optimizer = qml.GradientDescentOptimizer(stepsize=params['x'][1])
-            elif params['theta'][0] == "adam":
+            elif params['x'][0] == "adam":
                 self.x_optimizer = qml.AdamOptimizer(stepsize=params['x'][1])
+            elif params['x'][0] == "adagrad":
+                self.x_optimizer = qml.AdagradOptimizer(stepsize=params['x'][1])
+        
+        self.begin_state = np.random.random( size=self.number )*(np.pi/180.0)
 
 
 
     def VQE(self, cost_function):
-        theta = np.random.random( size=self.number )
+        #theta = np.random.random( size=self.number )
+        theta = self.begin_state
         energy = [cost_function(theta)]
         theta_evol = [theta]
 

@@ -16,12 +16,14 @@ class uccds_ansatz():
     
     qubits = 0
     repetition = 0
+    correction = 1
     begin_state = None
     singles = None
     doubles = None
 
     def set_device(self, params) -> None:
         self.base = params['base']
+        self.qubits = params["qubits"]
 
         ##Maquinas reales
         if self.base == 'qiskit.ibmq':
@@ -56,12 +58,11 @@ class uccds_ansatz():
         self.node_overlap = qml.QNode(self.swap_test, qml.device(self.base, wires=2*self.qubits), interface=params['interface'])
         return
     
-
-    
     def set_state(self, electrons):
         self.begin_state = qml.qchem.hf_state(electrons=electrons, orbitals=self.qubits)
         singles, doubles = qml.qchem.excitations(electrons, self.qubits)
         self.singles, self.doubles = qml.qchem.excitations_to_wires(singles, doubles)
+        return
 
 
 
@@ -82,14 +83,11 @@ class uccds_ansatz():
     
 
     def swap_test(self, theta, theta_overlap):
-        #state = np.concatenate((self.begin_state, self.begin_state), axis=0)
+        state = np.concatenate((self.begin_state, self.begin_state), axis=0)
         #qml.BasisStatePreparation(state, wires=range(2*self.qubits))
 
         qml.UCCSD(weights= theta, wires=range(self.qubits), 
-                s_wires=self.singles, d_wires=self.doubles, init_state=self.begin_state)
-        
-        qml.UCCSD(weights=theta_overlap, wires=range(self.qubits),#[self.qubits+i for i in range(self.qubits)], 
-                s_wires=self.singles, d_wires=self.doubles, init_state=None)
+                s_wires=self.singles, d_wires=self.doubles, init_state=state)
 
         for i in range(self.qubits):
             qml.CNOT(wires=[i,i+self.qubits])

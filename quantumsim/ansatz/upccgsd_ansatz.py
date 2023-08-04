@@ -20,6 +20,7 @@ class upccgsd_ansatz():
 
     def set_device(self, params) -> None:
         self.base = params['base']
+        self.qubits = params["qubits"]
 
         ##Maquinas reales
         if self.base == 'qiskit.ibmq':
@@ -56,7 +57,7 @@ class upccgsd_ansatz():
     
 
     
-    def set_state(self, electrons, type="hf"):
+    def set_state(self, electrons):
         self.begin_state = qml.qchem.hf_state(electrons=electrons, orbitals=self.qubits)
 
 

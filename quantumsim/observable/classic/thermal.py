@@ -4,7 +4,7 @@ import pandas as pd
 import pennylane as qml
 
 
-class hybrid_thermal(HE_ansatz):
+class hybrid_thermal(he_ansatz):
     dtype = "float64"
     boltz = 8.617333262e-5 #eV/K
 

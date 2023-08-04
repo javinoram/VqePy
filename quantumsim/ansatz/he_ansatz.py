@@ -5,7 +5,7 @@ from quantumsim.optimizers.funciones import *
 '''
 Hardware Efficient ansatz
 '''
-class HE_ansatz():
+class he_ansatz():
     def circuit(self, theta, obs):
         pass
 
@@ -16,13 +16,16 @@ class HE_ansatz():
     device= qml.device("default.qubit", wires=0)
     node = qml.QNode(circuit, device, interface="autograd")
     node_overlap = qml.QNode(circuit, device, interface="autograd")
+
     pattern = "chain"
     qubits = 0
     correction = 1
     repetition = 0
+    begin_state = None
 
     def set_device(self, params) -> None:
         self.base = params['base']
+        self.qubits = params['qubits']
 
         ## Maquinas reales
         if self.base == 'qiskit.ibmq':
@@ -59,6 +62,8 @@ class HE_ansatz():
         self.node_overlap = qml.QNode(self.circuit_overlap, self.device, interface=params['interface'])
         return
     
+    def set_state(self, electrons):
+        self.begin_state = qml.qchem.hf_state(electrons=electrons, orbitals=self.qubits)
 
     '''
     Funciones para la construccion del ansatz
@@ -132,7 +137,7 @@ class HE_ansatz():
     
 
     def circuit(self, theta, obs, characteristic):
-        qml.BasisState([0 for i in range(self.qubits*self.correction)], wires=range(self.qubits*self.correction))
+        qml.BasisState(self.begin_state, wires=range(self.qubits*self.correction))
         rotation_number = self.qubits
         for k in range(0, self.repetition):
             params = theta[k*rotation_number:(k+1)*rotation_number]
@@ -152,7 +157,6 @@ class HE_ansatz():
         return [qml.probs(wires=[0]) if is_identity(term) else qml.probs(wires=find_different_indices(term, "I") ) for term in obs ]
 
     def circuit_overlap(self, theta, theta_overlap):
-        qml.BasisState([0 for i in range(self.qubits*self.correction)], wires=range(self.qubits*self.correction))
         rotation_number = self.qubits
         for k in range(0, self.repetition):
             params = theta[k*rotation_number:(k+1)*rotation_number]
