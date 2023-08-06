@@ -63,7 +63,14 @@ class he_ansatz():
         return
     
     def set_state(self, electrons):
-        self.begin_state = qml.qchem.hf_state(electrons=electrons, orbitals=self.qubits)
+
+        if isinstance(electrons, int):
+            if electrons > 0:
+                self.begin_state = qml.qchem.hf_state(electrons=electrons, orbitals=self.qubits)
+            else:
+                self.begin_state = np.array([0 for _ in range(self.qubits*self.correction)])
+        else:
+            raise Exception("Number of electrons should be a positive integer or 0")
 
     '''
     Funciones para la construccion del ansatz
@@ -171,9 +178,7 @@ class he_ansatz():
         return qml.probs(wires=[i for i in range(self.qubits)])
 
 
-'''
-Hardware Efficient ansatz
-'''
+
 class HE_ansatz_thermal():
     def circuit(self, theta, obs):
         pass
@@ -230,7 +235,7 @@ class HE_ansatz_thermal():
     '''
     Funciones para la construccion del ansatz
     '''
-    def single_rotation(self, params, ):
+    def single_rotation(self, params,):
         for i in range(0, self.qubits):
             for j in range(self.correction):
                 qml.RY(params[i], wires=[self.correction*i+j])

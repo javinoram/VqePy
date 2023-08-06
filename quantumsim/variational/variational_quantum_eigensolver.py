@@ -15,6 +15,7 @@ class vqe_molecular():
     groups_caractericts = None
     coeff_object = None
     parity_terms = None
+    qubits = 0
 
     mapping= 'jordan_wigner'
     charge= 0
@@ -72,7 +73,6 @@ class vqe_molecular():
             Pauli_terms.append(aux)
 
         self.hamiltonian_object = Pauli_terms
-        #self.coeff_object = np.hstack(coeff)
         self.coeff_object = coeff
         self.parity_terms = np.array([ parity(i, 0.5, self.qubits) for i in range(2**self.qubits) ]) 
         return
@@ -184,23 +184,8 @@ class vqe_spin():
                                qml.pauli.string_to_pauli_word(list_to_string(Zterm))] )
 
                 coeff.extend( [-params["exchange"][0], -params["exchange"][1], -params["exchange"][2]] )
-
-        elif params["pattern"] == "all_to_all":
-            for i in range(self.qubits-1):
-                for j in range(i+1, self.qubits):
-                    Xterm = ["I"]*self.qubits
-                    Yterm = ["I"]*self.qubits
-                    Zterm = ["I"]*self.qubits
-
-                    Xterm[i] = "X"; Xterm[j]= "X"
-                    Yterm[i] = "Y"; Yterm[j]= "Y"
-                    Zterm[i] = "Z"; Zterm[j]= "Z"
-
-                    terms.extend( [qml.pauli.string_to_pauli_word(list_to_string(Xterm)),
-                               qml.pauli.string_to_pauli_word(list_to_string(Yterm)),
-                               qml.pauli.string_to_pauli_word(list_to_string(Zterm))] )
-
-                    coeff.extend( [-params["exchange"][0], -params["exchange"][1], -params["exchange"][2]] )
+        else:
+            raise("Pattern no available, consider open and close pattern")
         
 
         terms, coeff = qml.pauli.group_observables(observables=terms,coefficients=coeff, grouping_type='qwc', method='rlf')
@@ -213,7 +198,7 @@ class vqe_spin():
             Pauli_terms.append(aux)
 
         self.hamiltonian_object = Pauli_terms
-        self.coeff_object = np.hstack(coeff)
+        self.coeff_object = coeff
         self.parity_terms = np.array([ parity(i, self.spin, self.qubits) for i in range(2**(self.qubits*self.correction)) ]) 
         return
 
@@ -272,6 +257,7 @@ class vqe_fermihubbard():
     hopping = 0.0
     potential = 0.0
     spin = 0.5
+    qubits = 0
 
     def __init__(self, params):
         self.qubits = params["sites"]*2
@@ -303,7 +289,7 @@ class vqe_fermihubbard():
             Pauli_terms.append(aux)
 
         self.hamiltonian_object = Pauli_terms
-        self.coeff_object = np.hstack(coeff)
+        self.coeff_object = coeff
         self.parity_terms = np.array([ parity(i, self.spin, self.qubits) for i in range(2**self.qubits) ])
         return
     

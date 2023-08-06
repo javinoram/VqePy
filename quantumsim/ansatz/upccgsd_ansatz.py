@@ -49,8 +49,11 @@ class upccgsd_ansatz():
 
      
     def set_node(self, params) -> None:
-        if params['repetitions']:
+        try:
             self.repetition = params['repetitions']
+        except:
+            raise Exception("Number of repetitions was not indicated")
+        
         self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
         self.node_overlap = qml.QNode(self.swap_test, qml.device(self.base, wires=2*self.qubits), interface=params['interface'])
         return
@@ -58,8 +61,10 @@ class upccgsd_ansatz():
 
     
     def set_state(self, electrons):
-        self.begin_state = qml.qchem.hf_state(electrons=electrons, orbitals=self.qubits)
-
+        try:
+            self.begin_state = qml.qchem.hf_state(electrons=electrons, orbitals=self.qubits)
+        except:
+            raise Exception("Number of electrons should be a positive integer")
 
 
     def circuit(self, theta, obs, characteristic):

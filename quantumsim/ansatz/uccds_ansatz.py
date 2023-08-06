@@ -12,11 +12,11 @@ class uccds_ansatz():
 
     device= qml.device("default.qubit", wires=0)
     node = qml.QNode(circuit, device, interface="autograd")
-    node_overlap = qml.QNode(circuit, device, interface="autograd")
     
     qubits = 0
     repetition = 0
     correction = 1
+
     begin_state = None
     singles = None
     doubles = None
@@ -52,17 +52,22 @@ class uccds_ansatz():
 
      
     def set_node(self, params) -> None:
-        if params['repetitions']:
+        try:
             self.repetition = params['repetitions']
+        except:
+            raise Exception("Number of repetitions was not indicated")
+        
         self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
-        self.node_overlap = qml.QNode(self.swap_test, qml.device(self.base, wires=2*self.qubits), interface=params['interface'])
         return
     
+    
     def set_state(self, electrons):
-        self.begin_state = qml.qchem.hf_state(electrons=electrons, orbitals=self.qubits)
-        singles, doubles = qml.qchem.excitations(electrons, self.qubits)
-        self.singles, self.doubles = qml.qchem.excitations_to_wires(singles, doubles)
-        return
+        try:   
+            self.begin_state = qml.qchem.hf_state(electrons=electrons, orbitals=self.qubits)
+            singles, doubles = qml.qchem.excitations(electrons, self.qubits)
+            self.singles, self.doubles = qml.qchem.excitations_to_wires(singles, doubles)
+        except:
+            raise Exception("Number of electrons should be a positive integer")
 
 
 
@@ -80,17 +85,3 @@ class uccds_ansatz():
             else: 
                 pass
         return [qml.probs(wires=[0]) if is_identity(term) else qml.probs(wires=find_different_indices(term, "I") ) for term in obs ]
-    
-
-    def swap_test(self, theta, theta_overlap):
-        state = np.concatenate((self.begin_state, self.begin_state), axis=0)
-        #qml.BasisStatePreparation(state, wires=range(2*self.qubits))
-
-        qml.UCCSD(weights= theta, wires=range(self.qubits), 
-                s_wires=self.singles, d_wires=self.doubles, init_state=state)
-
-        for i in range(self.qubits):
-            qml.CNOT(wires=[i,i+self.qubits])
-            qml.Hadamard(wires=[i])
-        
-        return [qml.probs(wires=[i] ) for i in range(2*self.qubits)]
