@@ -50,7 +50,6 @@ class gradiend_optimizer():
 
 
     def VQE(self, cost_function):
-        #theta = np.random.random( size=self.number )
         theta = self.begin_state
         energy = [cost_function(theta)]
         theta_evol = [theta]
@@ -69,7 +68,7 @@ class gradiend_optimizer():
 
 
     def OS(self, cost_function, x, grad):
-        theta = np.random.random( size=self.number )
+        theta = self.begin_state
         for _ in range(self.maxiter):
             theta.requires_grad = True
             x.requires_grad = False
@@ -97,9 +96,9 @@ class gradiend_optimizer():
         
             print("state ", i+1)
             self.nit = 0
-            theta = np.random.random( size=self.number )
+
             
-            
+            theta = self.begin_state
             energy = [cost_function(theta)]
             theta_evol = [theta]
             for _ in range(self.maxiter):
@@ -115,3 +114,34 @@ class gradiend_optimizer():
             energy_final.append( energy[-1] )
             previous_theta.append( theta )
         return energy_final, theta
+    
+
+    def Thermal(self, cost_function, qubits, T):
+        energy = []
+        theta_evol = []
+
+        bounds = []
+        for l in range(2**qubits):
+            bounds.append( ((0,1)) )
+
+        def cost_aux(x): 
+            result = cost_function(x, 1.0/T)
+            if T>=1:
+                result += 10*np.abs(1 - np.sum(x))
+            else:
+                result += np.exp(1.0/T)*np.abs(1 - np.sum(x))
+            energy.append(result)
+            theta_evol.append(x)
+            return result
+        
+        for _ in range(self.maxiter):
+            theta.requires_grad = True
+            theta = self.theta_optimizer.step(cost_aux, theta)
+            energy.append(cost_function(theta))
+            theta_evol.append(theta)
+            prev_energy = energy[len(energy)-2]
+
+            conv = np.abs(energy[-1] - prev_energy)
+            if conv <= self.tol:
+                break
+        return energy, theta

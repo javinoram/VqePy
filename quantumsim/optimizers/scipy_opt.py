@@ -15,6 +15,7 @@ class scipy_optimizer():
     tol = 1e-6
     nit = 0
     number = 0
+    begin_state= None
 
     def __init__(self, params):
         self.number = params["number"]
@@ -27,6 +28,9 @@ class scipy_optimizer():
         
         if 'type' in params:
             self.type_method = params["type"]
+
+        self.begin_state = np.random.random( size=self.number )*(np.pi/180.0)
+
 
     def callback(self, x):
         self.nit += 1
@@ -48,8 +52,8 @@ class scipy_optimizer():
             return result
         
         ops = {'maxiter': self.maxiter}
-        theta = np.random.random( size=self.number )
-        theta = sc.optimize.minimize(cost_aux, theta, method=self.type_method, callback=self.callback, tol=self.tol, options=ops)['x']
+        theta = sc.optimize.minimize(cost_aux, self.begin_state, method=self.type_method,
+                callback=self.callback, tol=self.tol, options=ops)['x']
         return energy, theta
     
 
@@ -66,8 +70,7 @@ class scipy_optimizer():
             return result
         
         ops = {'maxiter': self.maxiter}
-        theta = theta = np.random.random( size=self.number )
-        theta = sc.optimize.minimize(cost_aux, np.concatenate((x,theta), axis=0), method=self.type_method, 
+        theta = sc.optimize.minimize(cost_aux, np.concatenate((x,self.begin_state), axis=0), method=self.type_method, 
                 callback=self.callback, tol=self.tol, options=ops)['x']
         return energy, theta
     
@@ -86,9 +89,8 @@ class scipy_optimizer():
                 return result
         
             self.nit = 0
-            theta = np.random.random( size=self.number )
             ops = {'maxiter': self.maxiter}
-            xs = sc.optimize.minimize(cost_aux, theta, method=self.type_method,
+            xs = sc.optimize.minimize(cost_aux, self.begin_state, method=self.type_method,
                     callback=self.callback, tol=self.tol, options=ops)['x']
             energy.append( cost_function(xs) )
             previous_theta.append(xs)
@@ -115,8 +117,7 @@ class scipy_optimizer():
             return result
         
         ops = {'maxiter': self.maxiter}
-        theta = np.random.random( size=self.number )
-        theta = sc.optimize.minimize(cost_aux, theta, method=self.type_method, 
+        theta = sc.optimize.minimize(cost_aux, self.begin_state, method=self.type_method, 
                 bounds=bounds, callback=self.callback, tol=self.tol, options=ops)['x']
         return energy, theta
 

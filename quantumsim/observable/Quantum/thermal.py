@@ -4,7 +4,7 @@ import pandas as pd
 import pennylane as qml
 
 
-class quantum_thermal(HE_ansatz_thermal):
+class quantum_thermal():
     dtype = "float64"
     boltz = 8.617333262e-5 #eV/K
 
@@ -19,17 +19,26 @@ class quantum_thermal(HE_ansatz_thermal):
         self.parity_terms = np.array([ parity(i, 0.5, self.qubits) for i in range(2**(self.qubits*self.correction)) ]) 
         return
         
-    def expected_value(self):
+
+    ###Calculadora de valores esperados
+    def expected_value(self, op):
         expval = []
-        for state in self.states:
-            result_prob = self.node( theta = state )
-            expval.append( np.sum(result_prob*self.parity_terms[:result_prob.shape[0]]) )
-        return np.array(expval)
+        if op == "enthalpy":
+            return self.energy
+        elif op == "magnetization":
+            for i,state in enumerate(self.states):
+                result_prob = self.node(theta = self.states[i])
+                expval.append( np.sum(result_prob*self.parity_terms[:result_prob.shape[0]]) )
+            return np.array(expval)
+        else:
+            return None
     
+
+    ###Estimadores de la distribucion de probabilidad
     def entropy(self, dist, epsilon=1e-8):
         result = 0.0
         for i in dist:
-            i = max(i, epsilon)  # Ensure the probability is at least epsilon
+            i = max(i, epsilon)
             result += -i * np.log(i)
         return result
 
