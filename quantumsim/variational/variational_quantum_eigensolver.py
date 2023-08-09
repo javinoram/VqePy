@@ -142,6 +142,9 @@ class vqe_spin():
     coeff_object = None
     parity_terms = None
 
+    node = None
+    node_overlap = None
+
     def __init__(self, params):
         self.qubits = params['sites']
         self.spin = params['spin']
@@ -264,19 +267,29 @@ class vqe_fermihubbard():
         self.hopping = -params["hopping"]
         self.potential = params["potential"]
         fermi_sentence = 0.0
+        fermi_hopping = 0.0
+        fermi_potential = 0.0
+        
 
         if params["sites"] == 1:
             fermi_sentence +=  self.potential*FermiC(0)*FermiA(0)*FermiC(1)*FermiA(1)
         else:
             for i in range(params["sites"]-1):
-                fermi_sentence +=  self.hopping*FermiC(2*i)*FermiA(2*i +2) + self.hopping*FermiC(2*i +2)*FermiA(2*i)
-                fermi_sentence +=  self.hopping*FermiC(2*i+1)*FermiA(2*i +3) + self.hopping*FermiC(2*i +3)*FermiA(2*i +1)  
-                fermi_sentence +=  self.potential*FermiC(2*i)*FermiA(2*i)*FermiC(2*i +1)*FermiA(2*i +1)
+                if self.hopping != 0.0:
+                    fermi_hopping +=  FermiC(2*i)*FermiA(2*i +2) + FermiC(2*i +2)*FermiA(2*i)
+                    fermi_hopping +=  FermiC(2*i+1)*FermiA(2*i +3) + FermiC(2*i +3)*FermiA(2*i +1)  
+                
+            for i in range(params["sites"]):
+                if self.potential != 0.0:
+                    fermi_potential += FermiC(2*i)*FermiA(2*i)*FermiC(2*i +1)*FermiA(2*i +1)
 
             if params["pattern"] == "close" and params["sites"] != 2:
                 qsite = 2*(params["sites"]-1)
-                fermi_sentence +=  self.hopping*FermiC(0)*FermiA(qsite) + self.hopping*FermiC(qsite)*FermiA(0)
-                fermi_sentence +=  self.hopping*FermiC(1)*FermiA(qsite+1) + self.hopping*FermiC(qsite+1)*FermiA(1) 
+                fermi_hopping +=  FermiC(0)*FermiA(qsite) + FermiC(qsite)*FermiA(0)
+                fermi_hopping +=  FermiC(1)*FermiA(qsite+1) + FermiC(qsite+1)*FermiA(1) 
+
+        fermi_sentence = -self.hopping*fermi_hopping + self.potential*fermi_potential
+
 
         coeff, terms = qml.jordan_wigner( fermi_sentence, ps=True).hamiltonian().terms()
         terms, coeff = qml.pauli.group_observables(observables=terms,coefficients=np.real(coeff), grouping_type='qwc', method='rlf')

@@ -91,7 +91,7 @@ class gradiend_optimizer():
             def cost_aux(x): 
                 result = cost_function(x) 
                 for previous in previous_theta:
-                    result += 5*overlap_cost_function(x, previous)
+                    result += 10*overlap_cost_function(x, previous)
                 return result
         
             print("state ", i+1)

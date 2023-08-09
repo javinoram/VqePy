@@ -12,11 +12,13 @@ class hybrid_thermal():
     states = None
     parity_terms = None
 
+    node = None
+
     def __init__(self, params):
         self.qubits = params["sites"]
         self.energy = np.array(params["energy"])
         self.states = params["states"]
-        self.parity_terms = np.array([ parity(i, 0.5, self.qubits) for i in range(2**(self.qubits*self.correction)) ]) 
+        self.parity_terms = np.array([ parity(i, 0.5, self.qubits) for i in range(2**(self.qubits)) ]) 
         return
 
     ###Calculadora de valores esperados
