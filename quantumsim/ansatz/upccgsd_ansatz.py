@@ -55,7 +55,7 @@ class upccgsd_ansatz():
             raise Exception("Number of repetitions was not indicated")
         
         self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
-        self.node_overlap = qml.QNode(self.swap_test, qml.device(self.base, wires=2*self.qubits), interface=params['interface'])
+        #self.node_overlap = qml.QNode(self.swap_test, qml.device(self.base, wires=2*self.qubits), interface=params['interface'])
         return
     
 

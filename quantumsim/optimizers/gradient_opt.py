@@ -56,6 +56,7 @@ class gradiend_optimizer():
 
         for _ in range(self.maxiter):
             theta.requires_grad = True
+            print("+1")
             theta = self.theta_optimizer.step(cost_function, theta)
             energy.append(cost_function(theta))
             theta_evol.append(theta)

@@ -3,7 +3,7 @@ from quantumsim.optimizers.funciones import *
 from pennylane import qchem
 from pennylane import FermiC, FermiA
 import math
-import dask
+#import dask
 from autograd.numpy.numpy_boxes import ArrayBox
 
 '''
