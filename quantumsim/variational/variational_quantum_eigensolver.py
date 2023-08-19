@@ -101,7 +101,7 @@ class vqe_molecular():
     
 
     def cost_function(self, theta):
-        results = np.array( [ self.process_group(theta, i) for i in range(len(self.groups_caractericts)) ] )
+        results = [ self.process_group(theta, i) for i in range(len(self.groups_caractericts)) ]
         return np.sum( results )
     
 
@@ -208,9 +208,8 @@ class vqe_spin():
     
 
     def cost_function(self, theta):
-        results = np.array( [ self.process_group(theta, i) for i in range(len(self.groups_caractericts)) ] )
+        results = [ self.process_group(theta, i) for i in range(len(self.groups_caractericts)) ]
         return np.sum( results )
-    
 
     def overlap_cost_function(self, theta, theta_overlap):
         result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap)
@@ -302,7 +301,10 @@ class vqe_fermihubbard():
 
     def cost_function(self, theta):
         results = np.array( [ self.process_group(theta, i) for i in range(len(self.groups_caractericts)) ] )
-        return np.sum( results )
+        print("1", results, type(results))
+        results = np.sum( results )
+        print("2", results, type(results))
+        return results
     
     
     def overlap_cost_function(self, theta, theta_overlap):
