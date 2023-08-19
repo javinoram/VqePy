@@ -3,16 +3,12 @@ from pennylane import numpy as np
 from quantumsim.optimizers.funciones import *
 
 class uccds_ansatz():
-    def circuit(self, theta, obs):
-        pass
-
     base = ""
     backend = ""
     token = ""
 
-    device= qml.device("default.qubit", wires=0)
-    node = qml.QNode(circuit, device, interface="autograd")
-    
+    device= None
+    node = None
     qubits = 0
     repetition = 0
     correction = 1

@@ -3,16 +3,13 @@ from pennylane import numpy as np
 from quantumsim.optimizers.funciones import *
 
 class upccgsd_ansatz():
-    def circuit(self, theta, obs):
-        pass
-
     base = ""
     backend = ""
     token = ""
 
-    device= qml.device("default.qubit", wires=0)
-    node = qml.QNode(circuit, device, interface="autograd")
-    node_overlap = qml.QNode(circuit, device, interface="autograd")
+    device= None
+    node = None
+    node_overlap = None
     
     qubits = 0
     repetition = 0
@@ -55,10 +52,18 @@ class upccgsd_ansatz():
             raise Exception("Number of repetitions was not indicated")
         
         self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
-        #self.node_overlap = qml.QNode(self.swap_test, qml.device(self.base, wires=2*self.qubits), interface=params['interface'])
         return
     
 
+    def set_node_overlap(self, params) -> None:
+        try:
+            self.repetition = params['repetitions']
+        except:
+            raise Exception("Number of repetitions was not indicated")
+
+        self.node_overlap = qml.QNode(self.swap_test, qml.device(self.base, wires=2*self.qubits), interface=params['interface'])
+        return
+    
     
     def set_state(self, electrons):
         try:

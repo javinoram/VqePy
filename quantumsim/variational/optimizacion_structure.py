@@ -60,12 +60,23 @@ class structure_molecular(upccgsd_ansatz):
         self.parity_terms = np.array([ parity(i, self.spin, self.qubits) for i in range(2**self.qubits) ]) 
         return
 
+
     def set_group_characteristics(self, hamiltonian_object):
-        aux_char = []
-        for group in hamiltonian_object:
-            aux_char.append( group_string(group) )
-        return aux_char
+        return np.array( [group_string(group) for group in hamiltonian_object] )
+
     
+    def process_group(self, theta, h_object, c_object, coeff_object):
+        term = h_object
+        charac = c_object
+
+        result_probs = self.node( theta=theta, obs=term, characteristic=charac )
+
+        expval = np.array([ np.sum(probs) if is_identity(term[k]) else np.sum(probs @ self.parity_terms[:probs.shape[0]]) for k, probs in enumerate(result_probs) ])
+
+        result = np.array( coeff_object @ expval)
+        return np.sum( result )
+    
+
     def grad_x(self, theta, x):
         grad = []
         delta = 0.01
@@ -79,54 +90,31 @@ class structure_molecular(upccgsd_ansatz):
             if len(terms)==0:
                 grad.append( 0.0 )
             else:
-                terms, coeff = qml.pauli.group_observables(observables=terms,coefficients=coeff, grouping_type='qwc', method='rlf')   
-                Pauli_terms = []
-                for group in terms:
-                    aux = []
-                    for term in group:
-                        string = Pauli_function(term, self.qubits)
-                        aux.append(string)
+                terms, coeff = qml.pauli.group_observables(observables=terms, coefficients=coeff, grouping_type='qwc', method='rlf')
+                Pauli_terms = [] 
+                for group in terms: 
+                    aux = [ Pauli_function(term, self.qubits) for term in group ]
                     Pauli_terms.append(aux)
-                coeff_object = np.hstack(coeff)
-                groups_caractericts = self.set_group_characteristics(Pauli_terms)
+                charactericts = self.set_group_characteristics(Pauli_terms)
                 
-                expval = []
-                for i,group in enumerate(Pauli_terms):
-                    result_probs = self.node(theta = theta, obs = group, characteristic=groups_caractericts[i])
-                    for k,probs in enumerate(result_probs):
-                        if is_identity(group[k]):
-                            expval.append(1.0)
-                        else:
-                            expval.append( np.sum(probs*self.parity_terms[:probs.shape[0]]) )
-                        
-                grad.append( np.sum( coeff_object*np.array(expval) ) )
+                expval = np.array( [ self.process_group(theta, Pauli_terms[i], charactericts[i], coeff[i]) for i in range(len(charactericts)) ] )
+                grad.append( np.sum( expval ) )
         return np.array(grad)
     
+
     def H(self, x):
         return qml.qchem.molecular_hamiltonian(self.symbols, x, mult= self.mult, charge=self.charge)[0]
     
+
     def cost_function(self, theta, x):
         coeff, terms = self.H(x).terms()
-        terms, coeff = qml.pauli.group_observables(observables=terms,coefficients=coeff, grouping_type='qwc', method='rlf')
-            
-        Pauli_terms = []
-        for group in terms:
-            aux = []
-            for term in group:
-                string = Pauli_function(term, self.qubits)
-                aux.append(string)
-            Pauli_terms.append(aux)
-        coeff_object = np.hstack(coeff)
-        groups_caractericts = self.set_group_characteristics(Pauli_terms)
-            
-        expval = []
-        for i,group in enumerate(Pauli_terms):
-            result_probs = self.node(theta = theta, obs = group, characteristic=groups_caractericts[i])
-            for k,probs in enumerate(result_probs):
-                if is_identity(group[k]):
-                    expval.append(1.0)
-                else:
-                    expval.append( np.sum(probs*self.parity_terms[:probs.shape[0]]) )
 
-        result = np.sum( coeff_object*np.array(expval) )
-        return result
+        terms, coeff = qml.pauli.group_observables(observables=terms, coefficients=coeff, grouping_type='qwc', method='rlf')
+        Pauli_terms = [] 
+        for group in terms: 
+            aux = [ Pauli_function(term, self.qubits) for term in group ]
+            Pauli_terms.append(aux)
+        charactericts = self.set_group_characteristics(Pauli_terms)
+            
+        result = np.array( [ self.process_group(theta, Pauli_terms[i], charactericts[i], coeff[i]) for i in range(len(charactericts)) ] )
+        return np.sum( result )
