@@ -228,6 +228,9 @@ class vqe_fermihubbard():
     spin = 0.5
     qubits = 0
 
+    node = None
+    node_overlap = None
+
     def __init__(self, params):
         self.qubits = params["sites"]*2
         self.hopping = -params["hopping"]
