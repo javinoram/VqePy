@@ -74,56 +74,35 @@ class vqe_molecular():
         terms, coeff = qml.pauli.group_observables(observables=terms, coefficients=coeff, grouping_type='qwc', method='rlf')
         Pauli_terms = [] 
         for group in terms: 
-            aux = []
-            for term in group:
-                string = Pauli_function(term, self.qubits)
-                aux.append(string)
+            aux = [ Pauli_function(term, self.qubits) for term in group ]
             Pauli_terms.append(aux)
 
         self.hamiltonian_object = Pauli_terms
         self.coeff_object = coeff
-        self.parity_terms = np.array([ parity(i, 0.5, self.qubits) for i in range(2**self.qubits) ]) 
+        self.parity_terms = np.array( [ parity(i, 0.5, self.qubits) for i in range(2**self.qubits) ]) 
         return
     
 
     def set_group_characteristics(self):
-        aux_char = []
-        for group in self.hamiltonian_object:
-            aux_char.append( group_string(group) )
-        self.groups_caractericts = aux_char
+        self.groups_caractericts = np.array( [group_string(group) for group in self.hamiltonian_object] )
         return
 
 
     def process_group(self, theta, i):
-        expval = []
         term = self.hamiltonian_object[i]
         charac = self.groups_caractericts[i]
 
-        result_probs = self.node(theta=theta, obs=term, characteristic=charac)
-        for k, probs in enumerate(result_probs):
-            if is_identity(term[k]):
-                expval.append( np.sum( probs ) )
-            else:
-                expval.append( np.sum( probs * self.parity_terms[:probs.shape[0]] ) )
+        result_probs = self.node( theta=theta, obs=term, characteristic=charac )
 
-        result = self.coeff_object[i]*np.array(expval)
-        return np.sum(result)
+        expval = np.array([ np.sum(probs) if is_identity(term[k]) else np.sum(probs @ self.parity_terms[:probs.shape[0]]) for k, probs in enumerate(result_probs) ])
+
+        result = np.array( self.coeff_object[i] @ expval)
+        return np.sum( result )
     
 
     def cost_function(self, theta):
-        results = []
-        for i in range(len(self.hamiltonian_object)):
-            results.append( self.process_group(theta, i) )
+        results = np.array( [ self.process_group(theta, i) for i in range(len(self.groups_caractericts)) ] )
         return np.sum( results )
-
-
-    def cost_function_parallel(self, theta):
-        results = []
-        for i in range(len(self.hamiltonian_object)):
-            results.append( dask.delayed(self.process_group)(theta, i) )
-        num_workers = 4
-        result = dask.compute(*results, scheduler="processes", num_workers=num_workers)
-        return np.sum( result )
     
 
     def overlap_cost_function(self, theta, theta_overlap):
@@ -200,12 +179,9 @@ class vqe_spin():
         
 
         terms, coeff = qml.pauli.group_observables(observables=terms,coefficients=coeff, grouping_type='qwc', method='rlf')
-        Pauli_terms = []
-        for group in terms:
-            aux = []
-            for term in group:
-                string = Pauli_function(term, self.qubits)
-                aux.append(string)
+        Pauli_terms = [] 
+        for group in terms: 
+            aux = [ Pauli_function(term, self.qubits) for term in group ]
             Pauli_terms.append(aux)
 
         self.hamiltonian_object = Pauli_terms
@@ -215,43 +191,25 @@ class vqe_spin():
 
 
     def set_group_characteristics(self):
-        aux_char = []
-        for group in self.hamiltonian_object:
-            aux_char.append( group_string(group) )
-        self.groups_caractericts = aux_char
+        self.groups_caractericts = np.array( [group_string(group) for group in self.hamiltonian_object] )
         return
     
-    
+
     def process_group(self, theta, i):
-        expval = []
         term = self.hamiltonian_object[i]
         charac = self.groups_caractericts[i]
 
-        result_probs = self.node(theta=theta, obs=term, characteristic=charac)
-        for k, probs in enumerate(result_probs):
-            if is_identity(term[k]):
-                expval.append( np.sum( probs ) )
-            else:
-                expval.append( np.sum( probs * self.parity_terms[:probs.shape[0]] ) )
+        result_probs = self.node( theta=theta, obs=term, characteristic=charac )
 
-        result = self.coeff_object[i]*np.array(expval)
-        return np.sum(result)
+        expval = np.array([ np.sum(probs) if is_identity(term[k]) else np.sum(probs @ self.parity_terms[:probs.shape[0]]) for k, probs in enumerate(result_probs) ])
+
+        result = np.array( self.coeff_object[i] @ expval)
+        return np.sum( result )
     
 
     def cost_function(self, theta):
-        results = []
-        for i in range(len(self.hamiltonian_object)):
-            results.append( self.process_group(theta, i) )
+        results = np.array( [ self.process_group(theta, i) for i in range(len(self.groups_caractericts)) ] )
         return np.sum( results )
-
-
-    def cost_function_parallel(self, theta):
-        results = []
-        for i in range(len(self.hamiltonian_object)):
-            results.append( dask.delayed(self.process_group)(theta, i) )
-        num_workers = 4
-        result = dask.compute(*results, scheduler="processes", num_workers=num_workers)
-        return np.sum( result )
     
 
     def overlap_cost_function(self, theta, theta_overlap):
@@ -311,13 +269,9 @@ class vqe_fermihubbard():
             terms.pop(index)
 
         terms, coeff = qml.pauli.group_observables(observables=terms,coefficients=np.real(coeff), grouping_type='qwc', method='rlf')
-        
-        Pauli_terms = []
-        for group in terms:
-            aux = []
-            for term in group:
-                string = Pauli_function(term, self.qubits)
-                aux.append(string)
+        Pauli_terms = [] 
+        for group in terms: 
+            aux = [ Pauli_function(term, self.qubits) for term in group ]
             Pauli_terms.append(aux)
 
         self.hamiltonian_object = Pauli_terms
@@ -327,43 +281,25 @@ class vqe_fermihubbard():
     
     
     def set_group_characteristics(self):
-        aux_char = []
-        for group in self.hamiltonian_object:
-            aux_char.append( group_string(group) )
-        self.groups_caractericts = aux_char
+        self.groups_caractericts = np.array( [group_string(group) for group in self.hamiltonian_object] )
         return
-    
 
+    
     def process_group(self, theta, i):
-        expval = []
         term = self.hamiltonian_object[i]
         charac = self.groups_caractericts[i]
 
-        result_probs = self.node(theta=theta, obs=term, characteristic=charac)
-        for k, probs in enumerate(result_probs):
-            if is_identity(term[k]):
-                expval.append( np.sum( probs ) )
-            else:
-                expval.append( np.sum( probs * self.parity_terms[:probs.shape[0]] ) )
+        result_probs = self.node( theta=theta, obs=term, characteristic=charac )
 
-        result = self.coeff_object[i]*np.array(expval)
-        return np.sum(result)
+        expval = np.array([ np.sum(probs) if is_identity(term[k]) else np.sum(probs @ self.parity_terms[:probs.shape[0]]) for k, probs in enumerate(result_probs) ])
+
+        result = np.array( self.coeff_object[i] @ expval)
+        return np.sum( result )
     
 
     def cost_function(self, theta):
-        results = []
-        for i in range(len(self.hamiltonian_object)):
-            results.append( self.process_group(theta, i) )
+        results = np.array( [ self.process_group(theta, i) for i in range(len(self.groups_caractericts)) ] )
         return np.sum( results )
-
-
-    def cost_function_parallel(self, theta):
-        results = []
-        for i in range(len(self.hamiltonian_object)):
-            results.append( dask.delayed(self.process_group)(theta, i) )
-        num_workers = 4
-        result = dask.compute(*results, scheduler="processes", num_workers=num_workers)
-        return np.sum( result )
     
     
     def overlap_cost_function(self, theta, theta_overlap):

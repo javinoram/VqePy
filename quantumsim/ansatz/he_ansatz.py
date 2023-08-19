@@ -6,16 +6,15 @@ from quantumsim.optimizers.funciones import *
 Hardware Efficient ansatz
 '''
 class he_ansatz():
-    def circuit(self, theta, obs):
-        pass
 
     base = ""
     backend = ""
     token = ""
 
-    device= qml.device("default.qubit", wires=0)
-    node = qml.QNode(circuit, device, interface="autograd")
-    node_overlap = qml.QNode(circuit, device, interface="autograd")
+    device= None
+    node = None
+    node_overlap = None
+    node_thermal = None
 
     pattern = "chain"
     qubits = 0
@@ -59,13 +58,28 @@ class he_ansatz():
         if params['repetitions']:
             self.repetition = params['repetitions']
         self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
-        self.node_overlap = qml.QNode(self.circuit_overlap, self.device, interface=params['interface'])
-        self.node_thermal = qml.QNode(self.circuit_thermal, self.device, interface=params['interface'])
+        return
+    
+    def set_node_overlap(self, params) -> None:
+        if params["pattern"]:
+            self.pattern = params["pattern"]
         
+        if params['repetitions']:
+            self.repetition = params['repetitions']
+        self.node_overlap = qml.QNode(self.circuit_overlap, self.device, interface=params['interface'])
+        return
+    
+
+    def set_node_thermal(self, params) -> None:
+        if params["pattern"]:
+            self.pattern = params["pattern"]
+        
+        if params['repetitions']:
+            self.repetition = params['repetitions']
+        self.node_thermal = qml.QNode(self.circuit_thermal, self.device, interface=params['interface'])
         return
     
     def set_state(self, electrons):
-
         if isinstance(electrons, int):
             if electrons > 0:
                 self.begin_state = qml.qchem.hf_state(electrons=electrons, orbitals=self.qubits)
