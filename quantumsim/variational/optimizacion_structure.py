@@ -60,6 +60,7 @@ class structure_molecular(upccgsd_ansatz):
         self.parity_terms = np.array([ parity(i, self.spin, self.qubits) for i in range(2**self.qubits) ]) 
         return
 
+
     def set_group_characteristics(self, hamiltonian_object):
         return np.array( [group_string(group) for group in hamiltonian_object] )
 
@@ -107,7 +108,7 @@ class structure_molecular(upccgsd_ansatz):
 
     def cost_function(self, theta, x):
         coeff, terms = self.H(x).terms()
-        
+
         terms, coeff = qml.pauli.group_observables(observables=terms, coefficients=coeff, grouping_type='qwc', method='rlf')
         Pauli_terms = [] 
         for group in terms: 
