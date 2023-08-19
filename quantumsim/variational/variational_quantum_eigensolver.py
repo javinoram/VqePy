@@ -3,8 +3,6 @@ from quantumsim.optimizers.funciones import *
 from pennylane import qchem
 from pennylane import FermiC, FermiA
 import math
-#import dask
-from autograd.numpy.numpy_boxes import ArrayBox
 
 '''
 Clase con las funciones de coste para utilizar VQE y VQD en 
@@ -22,6 +20,8 @@ class vqe_molecular():
     mult= 1
     basis='sto-3g'
     method='dhf'
+    active_electrons = None
+    active_orbitals = None
 
     node = None
     node_overlap = None
@@ -50,6 +50,12 @@ class vqe_molecular():
                 self.method = params['method']
             else:
                 raise Exception("Metodo no valido, considere dhf o pyscf")
+            
+        if 'active_electrons' in params:
+            self.active_electrons = params['active_electrons']
+
+        if 'active_orbitals' in params:
+            self.active_orbitals = params['active_orbitals']
 
         
         aux_h, self.qubits = qchem.molecular_hamiltonian(
@@ -59,7 +65,9 @@ class vqe_molecular():
             charge= self.charge,
             mult= self.mult,
             basis= self.basis,
-            method= self.method)
+            method= self.method,
+            active_electrons=self.active_electrons, 
+            active_orbitals=self.active_orbitals)
         coeff, terms = aux_h.terms()
         del aux_h
 
@@ -292,7 +300,18 @@ class vqe_fermihubbard():
 
 
         coeff, terms = qml.jordan_wigner( fermi_sentence, ps=True).hamiltonian().terms()
+        to_delete = []
+        for i,c in enumerate(coeff):
+            if c==0.0:
+                to_delete.append(i)
+        
+        to_delete = -np.sort(-np.array(to_delete))
+        for index in to_delete:
+            coeff.pop(index)
+            terms.pop(index)
+
         terms, coeff = qml.pauli.group_observables(observables=terms,coefficients=np.real(coeff), grouping_type='qwc', method='rlf')
+        
         Pauli_terms = []
         for group in terms:
             aux = []
