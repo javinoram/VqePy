@@ -56,7 +56,6 @@ class gradiend_optimizer():
 
         for _ in range(self.maxiter):
             theta.requires_grad = True
-            print(energy[-1])
             theta = self.theta_optimizer.step(cost_function, theta)
             energy.append(cost_function(theta))
             theta_evol.append(theta)
@@ -70,6 +69,9 @@ class gradiend_optimizer():
 
     def OS(self, cost_function, x, grad):
         theta = self.begin_state
+        x_evol = [x]
+        energy_evol = [cost_function(theta, x)]
+
         for _ in range(self.maxiter):
             theta.requires_grad = True
             x.requires_grad = False
@@ -78,10 +80,11 @@ class gradiend_optimizer():
             x.requires_grad = True
             theta.requires_grad = False
             _, x = self.x_optimizer.step(cost_function, theta, x, grad_fn=grad)
-
+            x_evol.append(x)
+            energy_evol.append(cost_function( theta,x ))
             if np.max(grad(theta, x)) <= self.tol:
                 break
-        return np.concatenate((x,theta), axis=0)
+        return x, x_evol, theta, energy_evol
     
     
     def VQD(self, cost_function, overlap_cost_function, k):
@@ -114,31 +117,31 @@ class gradiend_optimizer():
                     break
             energy_final.append( energy[-1] )
             previous_theta.append( theta )
-        return energy_final, theta
+        return energy_final, previous_theta
     
 
     def Thermal(self, cost_function, qubits, T):
         energy = []
         theta_evol = []
 
-        bounds = []
-        for l in range(2**qubits):
-            bounds.append( ((0,1)) )
-
         def cost_aux(x): 
+            x = np.abs(x)
             result = cost_function(x, 1.0/T)
+            
             if T>=1:
-                result += 10*np.abs(1 - np.sum(x))
+                result += 20*np.abs(1 - np.sum(x))
             else:
                 result += np.exp(1.0/T)*np.abs(1 - np.sum(x))
             energy.append(result)
             theta_evol.append(x)
             return result
         
+        theta = self.begin_state
         for _ in range(self.maxiter):
             theta.requires_grad = True
             theta = self.theta_optimizer.step(cost_aux, theta)
-            energy.append(cost_function(theta))
+
+            energy.append(cost_function(theta, 1.0/T))
             theta_evol.append(theta)
             prev_energy = energy[len(energy)-2]
 
