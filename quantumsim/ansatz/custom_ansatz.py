@@ -2,20 +2,17 @@ import pennylane as qml
 from pennylane import numpy as np
 from quantumsim.optimizers.funciones import *
 
-class uccds_ansatz():
+class custom_ansatz():
     base = ""
     backend = ""
     token = ""
 
     device= None
     node = None
+    
     qubits = 0
-    repetition = 0
-    correction = 1
-
     begin_state = None
-    singles = None
-    doubles = None
+    excitations = []
 
     def set_device(self, params) -> None:
         self.base = params['base']
@@ -46,23 +43,35 @@ class uccds_ansatz():
             self.device= qml.device(self.base, wires=self.qubits)
         return
 
+     
     def set_node(self, params) -> None:
-        try:
-            self.repetition = params['repetitions']
-        except:
-            raise Exception("Number of repetitions was not indicated")
-        
+        self.repetition = params['repetitions']
         self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
         return
     
+    
     def set_state(self, electrons):
-        try:   
-            self.begin_state = qml.qchem.hf_state(electrons=electrons, orbitals=self.qubits)
-            singles, doubles = qml.qchem.excitations(electrons, self.qubits)
-            self.singles, self.doubles = qml.qchem.excitations_to_wires(singles, doubles)
-        except:
-            raise Exception("Number of electrons should be a positive integer")
+        self.begin_state = qml.qchem.hf_state(electrons=electrons, orbitals=self.qubits)
+
+
+    def set_gates(self, singles=None, doubles=None):
+        if singles != None:
+            for term in singles:
+                self.excitations.append(term)
+        if doubles != None:
+            for term in doubles:
+                self.excitations.append(term)
+        return
+    
 
     def circuit(self, theta, obs):
-        qml.UCCSD(theta, range(self.qubits), self.singles, self.doubles, self.begin_state)
+        qml.BasisState(self.begin_state, wires=range(self.qubits))
+
+        for i, gate in enumerate(self.excitations):
+            if len(gate) == 4:
+                qml.DoubleExcitation(theta[i], wires=gate)
+            elif len(gate) == 2:
+                qml.SingleExcitation(theta[i], wires=gate)
+
         return [qml.expval(term) for term in obs ]
+    

@@ -14,7 +14,6 @@ class he_ansatz():
     device= None
     node = None
     node_overlap = None
-    node_thermal = None
 
     pattern = "chain"
     qubits = 0
@@ -51,6 +50,7 @@ class he_ansatz():
             self.device= qml.device(self.base, wires=self.qubits*self.correction)
         return
     
+    
     def set_node(self, params) -> None:
         if params["pattern"]:
             self.pattern = params["pattern"]
@@ -60,6 +60,7 @@ class he_ansatz():
         self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
         return
     
+
     def set_node_overlap(self, params) -> None:
         if params["pattern"]:
             self.pattern = params["pattern"]
@@ -70,23 +71,9 @@ class he_ansatz():
         return
     
 
-    def set_node_thermal(self, params) -> None:
-        if params["pattern"]:
-            self.pattern = params["pattern"]
-        
-        if params['repetitions']:
-            self.repetition = params['repetitions']
-        self.node_thermal = qml.QNode(self.circuit_thermal, self.device, interface=params['interface'])
-        return
-    
-    def set_state(self, electrons):
-        if isinstance(electrons, int):
-            if electrons > 0:
-                self.begin_state = qml.qchem.hf_state(electrons=electrons, orbitals=self.qubits)
-            else:
-                self.begin_state = np.array([0 for _ in range(self.qubits*self.correction)])
-        else:
-            raise Exception("Number of electrons should be a positive integer or 0")
+    def set_state(self, state):
+        self.begin_state = np.array([int(state[i]) for i in range(self.qubits)])
+
 
     '''
     Funciones para la construccion del ansatz
@@ -138,25 +125,16 @@ class he_ansatz():
         return
     
 
-    def circuit(self, theta, obs, characteristic):
-        qml.BasisState(self.begin_state, wires=range(self.qubits*self.correction))
+    def circuit(self, theta, obs):
+        qml.BasisState(self.begin_state, wires=range(self.qubits))
+
         rotation_number = self.qubits
         for k in range(0, self.repetition):
             params = theta[k*rotation_number:(k+1)*rotation_number]
             self.single_rotation(params)
             self.non_local_gates(0)
             
-        for j, index in enumerate(characteristic):
-            if index == 'X':
-                for k in range(self.correction):
-                    qml.Hadamard(wires=[self.correction*j + k])
-            elif index == 'Y':
-                for k in range(self.correction):
-                    qml.S(wires=[self.correction*j + k])
-                    qml.Hadamard(wires=[self.correction*j + k])
-            else: 
-                pass
-        return [qml.probs(wires=[0]) if is_identity(term) else qml.probs(wires=find_different_indices(term, "I") ) for term in obs ]
+        return [qml.expval(term) for term in obs ]
 
 
     def circuit_overlap(self, theta, theta_overlap):
@@ -172,14 +150,4 @@ class he_ansatz():
             self.non_local_gates(1)
             self.single_rotation(params)
         return qml.probs(wires=[i for i in range(self.qubits)])
-    
 
-    def circuit_thermal(self, theta):
-        qml.BasisState([0 for i in range(self.qubits*self.correction)], wires=range(self.qubits*self.correction))
-        rotation_number = self.qubits
-        for k in range(0, self.repetition):
-            params = theta[k*rotation_number:(k+1)*rotation_number]
-            self.single_rotation(params)
-            self.non_local_gates()
-            
-        return qml.probs(wires=[i for i in range(self.qubits) ])

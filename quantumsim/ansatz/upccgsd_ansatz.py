@@ -72,38 +72,10 @@ class upccgsd_ansatz():
             raise Exception("Number of electrons should be a positive integer")
 
 
-    def circuit(self, theta, obs, characteristic):
+    def circuit(self, theta, obs):
         theta = theta.reshape( qml.kUpCCGSD.shape(k=self.repetition, 
             n_wires=self.qubits, delta_sz=0) )
         
         qml.kUpCCGSD(theta, wires=range(self.qubits),
             k=self.repetition, delta_sz=0, init_state=self.begin_state)
-        
-        for j, index in enumerate(characteristic):
-            if index == 'X':
-                qml.Hadamard(wires=[j])
-            elif index == 'Y':
-                qml.Hadamard(wires=[j])
-            else: 
-                pass
-        return [qml.probs(wires=[0]) if is_identity(term) else qml.probs(wires=find_different_indices(term, "I") ) for term in obs ]
-    
-
-    def swap_test(self, theta, theta_overlap):
-        theta = theta.reshape( qml.kUpCCGSD.shape(k=self.repetition, 
-            n_wires=self.qubits, delta_sz=0) )
-        
-        theta_overlap = theta_overlap.reshape( qml.kUpCCGSD.shape(k=self.repetition, 
-            n_wires=self.qubits, delta_sz=0) )
-        
-        qml.kUpCCGSD(theta, wires=range(self.qubits),
-            k=self.repetition, delta_sz=0, init_state=self.begin_state)
-        
-        qml.kUpCCGSD(theta_overlap, wires=[self.qubits+i for i in range(self.qubits)],
-            k=self.repetition, delta_sz=0, init_state=self.begin_state)
-        
-        for i in range(self.qubits):
-            qml.CNOT(wires=[i,i+self.qubits])
-            qml.Hadamard(wires=[i])
-        
-        return [qml.probs(wires=[i] ) for i in range(2*self.qubits)]
+        return [qml.expval(term) for term in obs ]

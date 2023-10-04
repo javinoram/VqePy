@@ -3,7 +3,7 @@ from quantumsim.optimizers import *
 from pennylane import qchem
 from pennylane import numpy as np
 
-class structure_molecular(upccgsd_ansatz):
+class structure_molecular():
     symbols = None
     coordinates = None
 
@@ -17,17 +17,18 @@ class structure_molecular(upccgsd_ansatz):
     mult= 1
     basis='sto-3g'
     method='dhf'
-    spin = 0.5
+
+    node = None
 
     def __init__(self, symbols, coordinates, params= None):
         self.symbols = symbols
         self.coordinates = coordinates
         
         if params['mapping']:
-            if params['mapping'] in ("jordan_wigner", "bravyi_kitaev"):
+            if params['mapping'] in ("jordan_wigner"):
                 self.mapping = params['mapping']
             else:
-                raise Exception("Mapping no valido, considere jordan_wigner o bravyi_kitaev")
+                raise Exception("Mapping no valido, considere jordan_wigner")
         
         if params['charge']:
             self.charge = params['charge']
@@ -36,10 +37,10 @@ class structure_molecular(upccgsd_ansatz):
             self.mult = params['mult']
 
         if params['basis']:
-            if params['basis'] in ("sto-3g", "6-31g", "6-311g", "cc-pvdz"):
+            if params['basis'] in ("sto-3g"):
                 self.basis = params['basis']
             else:
-                raise Exception("Base no valida, considere sto-3g, 6-31g, 6-311g, cc-pvdz")
+                raise Exception("Base no valida, considere sto-3g")
         
         if params['method']:
             if params['method'] in ("pyscf", "dhf"):
@@ -57,23 +58,13 @@ class structure_molecular(upccgsd_ansatz):
             method= self.method)
         
         self.begin_state = qml.qchem.hf_state(int(self.qubits/2), self.qubits)
-        self.parity_terms = np.array([ parity(i, self.spin, self.qubits) for i in range(2**self.qubits) ]) 
         return
-
-
-    def set_group_characteristics(self, hamiltonian_object):
-        return np.array( [group_string(group) for group in hamiltonian_object] )
-
     
-    def process_group(self, theta, h_object, c_object, coeff_object):
-        term = h_object
-        charac = c_object
-
-        result_probs = self.node( theta=theta, obs=term, characteristic=charac )
-
-        expval = np.array([ np.sum(probs) if is_identity(term[k]) else np.sum(probs @ self.parity_terms[:probs.shape[0]]) for k, probs in enumerate(result_probs) ])
-
-        result = np.array( coeff_object @ expval)
+    
+    def process_group(self, theta, h_object, coeff_object):
+        expval = np.array( self.node( theta=theta, obs=h_object) )
+        coeff = np.array(coeff_object)
+        result = np.array( coeff @ expval)
         return np.sum( result )
     
 
@@ -91,13 +82,7 @@ class structure_molecular(upccgsd_ansatz):
                 grad.append( 0.0 )
             else:
                 terms, coeff = qml.pauli.group_observables(observables=terms, coefficients=coeff, grouping_type='qwc', method='rlf')
-                Pauli_terms = [] 
-                for group in terms: 
-                    aux = [ Pauli_function(term, self.qubits) for term in group ]
-                    Pauli_terms.append(aux)
-                charactericts = self.set_group_characteristics(Pauli_terms)
-                
-                expval = np.array( [ self.process_group(theta, Pauli_terms[i], charactericts[i], coeff[i]) for i in range(len(charactericts)) ] )
+                expval = np.array( [ self.process_group(theta, terms[i], coeff[i]) for i in range(len(terms)) ] )
                 grad.append( np.sum( expval ) )
         return np.array(grad)
     
@@ -108,13 +93,7 @@ class structure_molecular(upccgsd_ansatz):
 
     def cost_function(self, theta, x):
         coeff, terms = self.H(x).terms()
-
         terms, coeff = qml.pauli.group_observables(observables=terms, coefficients=coeff, grouping_type='qwc', method='rlf')
-        Pauli_terms = [] 
-        for group in terms: 
-            aux = [ Pauli_function(term, self.qubits) for term in group ]
-            Pauli_terms.append(aux)
-        charactericts = self.set_group_characteristics(Pauli_terms)
-            
-        result = np.array( [ self.process_group(theta, Pauli_terms[i], charactericts[i], coeff[i]) for i in range(len(charactericts)) ] )
-        return np.sum( result )
+        result = np.array( [ self.process_group(theta, terms[i], coeff[i]) for i in range(len(terms)) ] )
+        result = np.sum( result )
+        return result 
