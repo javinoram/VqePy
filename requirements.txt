@@ -8,3 +8,4 @@ qiskit_ibm_provider
 pennylane-ionq
 pyyaml
 dask
+networkx
