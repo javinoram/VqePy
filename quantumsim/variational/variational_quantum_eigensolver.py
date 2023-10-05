@@ -162,7 +162,7 @@ Clase con las funciones de coste para utilizar VQE y VQD
 en un hamiltoniano de espines
 '''
 class vqe_fermihubbard():
-    hamiltonian_object= None
+    hamiltonian = None
     hopping = 0.0
     potential = 0.0
     electric = 0.0
@@ -174,7 +174,7 @@ class vqe_fermihubbard():
 
     def __init__(self, params, lat):
         self.qubits = params["sites"]*2
-        self.hopping = params["hopping"]
+        self.hopping = -params["hopping"]
         self.potential = params["potential"]
         fermi_sentence = 0.0
         fermi_potential = 0.0
@@ -191,47 +191,52 @@ class vqe_fermihubbard():
                 p1, p2 = pair
                 fermi_hopping +=  FermiC(2*(x*p1[0] + p1[1]))*FermiA(2*(x*p2[0] + p2[1])) + FermiC(2*(x*p2[0] + p2[1]))*FermiA(2*(x*p1[0] + p1[1]))
                 fermi_hopping +=  FermiC(2*(x*p1[0] + p1[1])+1)*FermiA(2*(x*p2[0] + p2[1])+1) + FermiC(2*(x*p2[0] + p2[1])+1)*FermiA(2*(x*p1[0] + p1[1])+1)
-            
+
+            fermi_sentence = self.hopping*fermi_hopping
+
             #U term
             if 'on-site' in params['interactions']:
                 fermi_U = 0.0
                 for node in lattice_node:
                     p1, p2 = node
-                    fermi_U += FermiC(2*(x*p1[0] + p1[1]))*FermiA(2*(x*p1[0] + p1[1]))*FermiC(2*(x*p2[0] + p2[1])+1)*FermiA(2*(x*p2[0] + p2[1])+1)
+                    fermi_U += FermiC(x*p1 + 2*p2)*FermiA(x*p1 + 2*p2)*FermiC(x*p1 + 2*p2+1)*FermiA(x*p1 + 2*p2+1)
+                fermi_sentence += self.potential*fermi_U
 
             #E term
             if 'electric' in params['interactions']:
                 fermi_E = 0.0
                 for node in lattice_node:
                     p1, p2 = node
-                    fermi_U += FermiC(2*(x*p1[0] + p1[1]))*FermiA(2*(x*p1[0] + p1[1]))
-                    fermi_U += FermiC(2*(x*p2[0] + p2[1])+1)*FermiA(2*(x*p2[0] + p2[1])+1)
+                    fermi_E += FermiC(2*(x*p1[0] + p1[1]))*FermiA(2*(x*p1[0] + p1[1]))
+                    fermi_E += FermiC(2*(x*p2[0] + p2[1])+1)*FermiA(2*(x*p2[0] + p2[1])+1)
                 pass
-            
 
 
-        fermi_sentence = -fermi_hopping + (self.potential/self.hopping)*fermi_potential
         coeff, terms = qml.jordan_wigner( fermi_sentence, ps=True ).hamiltonian().terms()
-
         to_delete = []
         for i,c in enumerate(coeff):
             if c==0.0:
                 to_delete.append(i)
+            if isinstance(terms[i], qml.Identity):
+                terms[i] = qml.Identity(wires=[0])
         
         to_delete = -np.sort(-np.array(to_delete))
         for index in to_delete:
             coeff.pop(index)
             terms.pop(index)
 
-        self.hamiltonian_object, self.coeff_object = qml.pauli.group_observables(observables=terms, coefficients=coeff, 
+        self.hamiltonian, self.coeff_object = qml.pauli.group_observables(observables=terms, coefficients=np.real(np.array(coeff)), 
                 grouping_type='qwc', method='rlf')
         return
 
     def process_group(self, theta, i):
-        result = self.node( theta=theta, obs= self.hamiltonian_object[i] )
-        result = np.real( np.array(self.coeff_object[i]) ) @ np.array(result)
-        return np.sum( result )
+        result = self.node( theta=theta, obs= self.hamiltonian[i] )
+        results = 0.0
+        for j, r in enumerate(result):
+            results += (self.coeff_object[i][j])*r
+        #result = np.sum( np.array(self.coeff_object[i]).dot( np.array(result) ) )
+        return results
     
     def cost_function(self, theta):
-        results = [ self.process_group(theta, i) for i in range(len(self.hamiltonian_object)) ]
+        results = [ self.process_group(theta, i) for i in range(len(self.hamiltonian)) ]
         return np.sum( results )

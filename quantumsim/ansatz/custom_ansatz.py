@@ -55,18 +55,23 @@ class custom_ansatz():
 
 
     def set_gates(self, singles=None, doubles=None):
-        self.excitations = doubles + singles
+        if singles != None:
+            for term in singles:
+                self.excitations.append(term)
+        if doubles != None:
+            for term in doubles:
+                self.excitations.append(term)
         return
     
 
-    def circuit(self, params, obs):
+    def circuit(self, theta, obs):
         qml.BasisState(self.begin_state, wires=range(self.qubits))
 
         for i, gate in enumerate(self.excitations):
             if len(gate) == 4:
-                qml.DoubleExcitation(params[i], wires=gate)
+                qml.DoubleExcitation(theta[i], wires=gate)
             elif len(gate) == 2:
-                qml.SingleExcitation(params[i], wires=gate)
+                qml.SingleExcitation(theta[i], wires=gate)
 
         return [qml.expval(term) for term in obs ]
     
