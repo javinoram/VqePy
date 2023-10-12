@@ -25,10 +25,7 @@ class structure_molecular():
         self.coordinates = coordinates
         
         if params['mapping']:
-            if params['mapping'] in ("jordan_wigner"):
-                self.mapping = params['mapping']
-            else:
-                raise Exception("Mapping no valido, considere jordan_wigner")
+            self.mapping = params['mapping']
         
         if params['charge']:
             self.charge = params['charge']
@@ -36,17 +33,11 @@ class structure_molecular():
         if params['mult']:
             self.mult = params['mult']
 
-        if params['basis']:
-            if params['basis'] in ("sto-3g"):
-                self.basis = params['basis']
-            else:
-                raise Exception("Base no valida, considere sto-3g")
+        if 'basis' in params:
+            self.basis = params['basis']
         
         if params['method']:
-            if params['method'] in ("pyscf", "dhf"):
-                self.method = params['method']
-            else:
-                raise Exception("Metodo no valido, considere dhf o pyscf")
+            self.method = params['method']
 
         _, self.qubits = qchem.molecular_hamiltonian(
             symbols= symbols,
@@ -64,8 +55,8 @@ class structure_molecular():
     def process_group(self, theta, h_object, coeff_object):
         expval = np.array( self.node( theta=theta, obs=h_object) )
         coeff = np.array(coeff_object)
-        result = np.array( coeff @ expval)
-        return np.sum( result )
+        result = coeff @ expval
+        return result
     
 
     def grad_x(self, theta, x):

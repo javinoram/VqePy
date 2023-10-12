@@ -9,3 +9,4 @@ pennylane-ionq
 pyyaml
 dask
 networkx
+basis-set-exchange

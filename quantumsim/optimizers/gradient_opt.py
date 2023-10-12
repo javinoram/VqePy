@@ -1,15 +1,6 @@
 import pennylane as qml
-import math
-import scipy.linalg as la
-import scipy as sc
-import warnings
-import itertools
 from pennylane import numpy as np
 from quantumsim.optimizers import *
-
-class TookTooManyIters(Warning):
-    pass
-
 
 class gradiend_optimizer():
     maxiter = 100
@@ -118,34 +109,3 @@ class gradiend_optimizer():
             energy_final.append( energy[-1] )
             previous_theta.append( theta )
         return energy_final, previous_theta
-    
-
-    def Thermal(self, cost_function, qubits, T):
-        energy = []
-        theta_evol = []
-
-        def cost_aux(x): 
-            x = np.abs(x)
-            result = cost_function(x, 1.0/T)
-            
-            if T>=1:
-                result += 20*np.abs(1 - np.sum(x))
-            else:
-                result += np.exp(1.0/T)*np.abs(1 - np.sum(x))
-            energy.append(result)
-            theta_evol.append(x)
-            return result
-        
-        theta = self.begin_state
-        for _ in range(self.maxiter):
-            theta.requires_grad = True
-            theta = self.theta_optimizer.step(cost_aux, theta)
-
-            energy.append(cost_function(theta, 1.0/T))
-            theta_evol.append(theta)
-            prev_energy = energy[len(energy)-2]
-
-            conv = np.abs(energy[-1] - prev_energy)
-            if conv <= self.tol:
-                break
-        return energy, theta
