@@ -131,7 +131,6 @@ class adap_molecular():
         return qml.expval(self.hamiltonian)
     
 
-
 class adap_fermihubbard():
     hamiltonian = None
     hopping = 0.0

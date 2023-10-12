@@ -78,4 +78,5 @@ class upccgsd_ansatz():
         
         qml.kUpCCGSD(theta, wires=range(self.qubits),
             k=self.repetition, delta_sz=0, init_state=self.begin_state)
+        
         return [qml.expval(term) for term in obs ]

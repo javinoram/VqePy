@@ -64,8 +64,8 @@ class structure_molecular():
     def process_group(self, theta, h_object, coeff_object):
         expval = np.array( self.node( theta=theta, obs=h_object) )
         coeff = np.array(coeff_object)
-        result = np.array( coeff @ expval)
-        return np.sum( result )
+        result = coeff @ expval
+        return result
     
 
     def grad_x(self, theta, x):

@@ -1,10 +1,4 @@
-'''
-All the lattice models (without the custom one) are created
-using the python's networkx librarie
-'''
-
 import networkx as nx
-import numpy as np
 
 
 '''
