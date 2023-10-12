@@ -1,10 +1,4 @@
-'''
-All the lattice models (without the custom one) are created
-using the python's networkx librarie
-'''
-
 import networkx as nx
-import numpy as np
 
 
 '''
@@ -21,9 +15,8 @@ def lattice(params):
     periodicity = False
     if isinstance(params['bound'], list):
         periodicity = params['bound']
-    elif params['bound'] == 'periodic':
+    elif params['bound'] == True:
         periodicity = params['bound']
-
 
     if params['lattice'] == 'chain':
         lattice = nx.grid_2d_graph(params['size'][0], params['size'][1], periodicity)
