@@ -1,6 +1,4 @@
 import pennylane as qml
-import math
-import scipy.linalg as la
 import scipy as sc
 import warnings
 from pennylane import numpy as np
@@ -96,28 +94,4 @@ class scipy_optimizer():
             previous_theta.append(xs)
         return energy, previous_theta
 
-
-    def Thermal(self, cost_function, qubits, T):
-        energy = []
-        theta_evol = []
-        self.nit = 0
-
-        bounds = []
-        for l in range(2**qubits):
-            bounds.append( ((0,1)) )
-
-        def cost_aux(x): 
-            result = cost_function(x, 1.0/T)
-            if T>=1:
-                result += 10*np.abs(1 - np.sum(x))
-            else:
-                result += np.exp(1.0/T)*np.abs(1 - np.sum(x))
-            energy.append(result)
-            theta_evol.append(x)
-            return result
-        
-        ops = {'maxiter': self.maxiter}
-        theta = sc.optimize.minimize(cost_aux, self.begin_state, method=self.type_method, 
-                bounds=bounds, callback=self.callback, tol=self.tol, options=ops)['x']
-        return energy, theta
 

@@ -4,15 +4,58 @@ from pennylane import qchem
 from pennylane import FermiC, FermiA
 import itertools
 
-'''
-Clase con las funciones de coste para utilizar VQE y VQD en 
-un hamiltoniano molecular
-'''
-class vqe_molecular():
-    hamiltonian_object= None
-    coeff_object = None
-    qubits = 0
 
+'''
+Base del VQE donde se definen las funciones de coste,
+y funciones de calculos auxiliares, como las proyecciones
+'''
+class vqe_base():
+    hamiltonian= None
+    coeff = None
+    qubits = 0
+    node = None
+
+    def process_group(self, theta, i):
+        result = self.node( theta=theta, obs= self.hamiltonian[i] )
+        result = np.array(self.coeff[i]) @ np.array(result)
+        return result 
+    
+    def cost_function(self, theta):
+        results = [ self.process_group(theta, i) for i in range(len(self.hamiltonian)) ]
+        return np.sum( results )
+    
+    #Cantidades utiles de saber
+    #Probabilidad de cada uno de los estados basales segun el estado obtenido
+    def get_projections(self, theta):
+        combos = itertools.product([0, 1], repeat=self.qubits)
+        s = [list(c) for c in combos]
+        pro = [ qml.Projector(state, wires=range(self.qubits)) for state in s]
+        result = [self.node( theta=theta, obs=[state])[0] for state in pro]
+        return result, s
+    
+    #Espin total del estado
+    def get_totalspinS(self, theta, electrons):
+        s_square = qml.qchem.spin2(electrons, self.qubits)
+        result = self.node( theta=theta, obs=[s_square] )[0]
+        return result
+    
+    #Espin total proyectado en S_z del estado
+    def get_totalspinSz(self, theta, electrons):
+        s_z = qml.qchem.spinz(electrons, self.qubits)
+        result = self.node( theta=theta, obs=[s_z] )[0]
+        return result
+    
+    #Numero de particulas del estado
+    def get_totalspinSz(self, theta, electrons):
+        n = qml.qchem.particle_number(self.qubits)
+        result = self.node( theta=theta, obs=[n] )[0]
+        return result
+
+
+'''
+Construtor del hamiltoniano molecular
+'''
+class vqe_molecular(vqe_base):
     mapping= 'jordan_wigner'
     charge= 0
     mult= 1
@@ -21,15 +64,9 @@ class vqe_molecular():
     active_electrons = None
     active_orbitals = None
 
-    node = None
-    node_overlap = None
-
     def __init__(self, symbols, coordinates, params= None):
         if 'mapping' in params:
-            if params['mapping'] in ("jordan_wigner"):
-                self.mapping = params['mapping']
-            else:
-                raise Exception("Mapping no valido, considere jordan_wigner")
+            self.mapping = params['mapping']
             
         if 'charge' in params:
             self.charge = params['charge']
@@ -38,24 +75,10 @@ class vqe_molecular():
             self.mult = params['mult']
 
         if 'basis' in params:
-            #if params['basis'] in ("sto-3g", "6-31g", "6-311g", "cc-pvdz"):
-            #    self.basis = params['basis']
-            #else:
-            #    raise Exception("Base no valida, considere sto-3g, 6-31g, 6-311g, cc-pvdz")
-            exponents = []
-            coeff = []
-            for element in symbols:
-                basis = qml.qchem.load_basisset(params['basis'], element)
-                exponents.append(basis["exponents"])
-                coeff.append(basis["coefficients"])
-            #exponents = np.ravel(exponents)
-            #coeff = np.ravel(coeff)
+            self.basis = params['basis']
 
         if 'method' in params:
-            if params['method'] in ("pyscf", "dhf"):
-                self.method = params['method']
-            else:
-                raise Exception("Metodo no valido, considere dhf o pyscf")
+            self.method = params['method']
             
         if 'active_electrons' in params:
             self.active_electrons = params['active_electrons']
@@ -73,50 +96,23 @@ class vqe_molecular():
             basis= self.basis,
             method= self.method,
             active_electrons=self.active_electrons, 
-            active_orbitals=self.active_orbitals,)
+            active_orbitals=self.active_orbitals,
+            load_data=True)
         coeff, terms = aux_h.terms()
         del aux_h
 
-        self.hamiltonian_object, self.coeff_object = qml.pauli.group_observables(observables=terms, coefficients=np.real(np.array(coeff)), 
+        self.hamiltonian, self.coeff = qml.pauli.group_observables(observables=terms, coefficients=np.real(np.array(coeff)), 
                 grouping_type='qwc', method='rlf')
         return
-    
-
-    def process_group(self, theta, i):
-        result = self.node( theta=theta, obs= self.hamiltonian_object[i] )
-        result = np.array(self.coeff_object[i]) @ np.array(result)
-        return result 
-    
-
-    def cost_function(self, theta):
-        results = [ self.process_group(theta, i) for i in range(len(self.hamiltonian_object)) ]
-        return np.sum( results )
-    
-
-    def get_projections(self, theta):
-        combos = itertools.product([0, 1], repeat=self.qubits)
-        s = [list(c) for c in combos]
-        pro = [ qml.Projector(state, wires=range(self.qubits)) for state in s]
-        result = [self.node( theta=theta, obs=[state])[0] for state in pro]
-        return result, s
 
 
 
 '''
-Clase con las funciones de coste para utilizar VQE y VQD
-en un hamiltoniano de espines
+Construtor del hamiltoniano de espines
 '''
-class vqe_spin():
-    hamiltonian_object = None
-    coeff_object = None
-
-    node = None
-    node_overlap = None
-
+class vqe_spin(vqe_base):
     def __init__(self, params, lat):
         self.qubits = params['sites']
-        self.spin = params['spin']
-
         terms = []
         coeff = []
 
@@ -128,9 +124,9 @@ class vqe_spin():
 
             #J term
             for pair in lattice_edge:
-                termz = qml.PauliZ(wires=[ x*pair[0][0] + pair[0][1], x*pair[1][0] + pair[1][1]])
-                termx = qml.PauliX(wires=[ x*pair[0][0] + pair[0][1], x*pair[1][0] + pair[1][1]])
-                termy = qml.PauliY(wires=[ x*pair[0][0] + pair[0][1], x*pair[1][0] + pair[1][1]])
+                termz = qml.PauliZ(wires=[ x*pair[0][0] + pair[0][1]])@qml.PauliZ(wires=[x*pair[1][0] + pair[1][1]])
+                termx = qml.PauliX(wires=[ x*pair[0][0] + pair[0][1]])@qml.PauliX(wires=[x*pair[1][0] + pair[1][1]])
+                termy = qml.PauliY(wires=[ x*pair[0][0] + pair[0][1]])@qml.PauliY(wires=[x*pair[1][0] + pair[1][1]])
 
                 terms.extend( [termx, termy, termz] )
                 coeff.extend( [-params["J"][0]/4.0, -params["J"][1]/4.0, -params["J"][2]/4.0] )
@@ -155,44 +151,15 @@ class vqe_spin():
             coeff.pop(index)
             terms.pop(index)
 
-        self.hamiltonian_object, self.coeff_object = qml.pauli.group_observables(observables=terms, coefficients=np.real(np.array(coeff)), 
+        self.hamiltonian, self.coeff = qml.pauli.group_observables(observables=terms, coefficients=np.real(np.array(coeff)), 
                 grouping_type='qwc', method='rlf')
         return
-
-    def process_group(self, theta, i):
-        result = self.node( theta=theta, obs= self.hamiltonian_object[i] )
-        result = np.array(self.coeff_object[i]) @ np.array(result)
-        return result
-    
-    def cost_function(self, theta):
-        results = [ self.process_group(theta, i) for i in range(len(self.hamiltonian_object)) ]
-        return np.sum( results )
-
-    def overlap_cost_function(self, theta, theta_overlap):
-        result_probs = self.node_overlap(theta = theta, theta_overlap=theta_overlap)
-        return result_probs[0]
-    
-
-    def get_projections(self, theta):
-        combos = itertools.product([0, 1], repeat=self.qubits)
-        s = [list(c) for c in combos]
-        pro = [ qml.Projector(state, wires=range(self.qubits)) for state in s]
-        result = [self.node( theta=theta, obs=[state])[0] for state in pro]
-        return result, s
     
 
 '''
-Clase con las funciones de coste para utilizar VQE y VQD
-en un hamiltoniano de espines
+Construtor del hamiltoniano de fermi-hubbard
 '''
-class vqe_fermihubbard():
-    hamiltonian = None
-
-    qubits = 0
-
-    node = None
-    node_overlap = None
-
+class vqe_fermihubbard(vqe_base):
     def __init__(self, params, lat):
         self.qubits = params["sites"]*2
         fermi_sentence = 0.0
@@ -234,6 +201,7 @@ class vqe_fermihubbard():
 
 
         coeff, terms = qml.jordan_wigner( fermi_sentence, ps=True ).hamiltonian().terms()
+
         to_delete = []
         for i,c in enumerate(coeff):
             if c==0.0:
@@ -246,23 +214,6 @@ class vqe_fermihubbard():
             coeff.pop(index)
             terms.pop(index)
 
-        self.hamiltonian, self.coeff_object = qml.pauli.group_observables(observables=terms, coefficients=np.real(np.array(coeff)), 
+        self.hamiltonian, self.coeff = qml.pauli.group_observables(observables=terms, coefficients=np.real(np.array(coeff)), 
                 grouping_type='qwc', method='rlf')
         return
-
-    def process_group(self, theta, i):
-        result = self.node( theta=theta, obs= self.hamiltonian[i] )
-        result = np.array(self.coeff_object[i]) @ np.array(result)
-        return result
-    
-    def cost_function(self, theta):
-        results = [ self.process_group(theta, i) for i in range(len(self.hamiltonian)) ]
-        return np.sum( results )
-    
-
-    def get_projections(self, theta):
-        combos = itertools.product([0, 1], repeat=self.qubits)
-        s = [list(c) for c in combos]
-        pro = [ qml.Projector(state, wires=range(self.qubits)) for state in s]
-        result = [self.node( theta=theta, obs=[state])[0] for state in pro]
-        return result, s
