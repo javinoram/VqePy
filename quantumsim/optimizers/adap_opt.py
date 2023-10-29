@@ -29,9 +29,9 @@ class adap_optimizer():
         if 'theta' in params:
             self.optimizer = qml.GradientDescentOptimizer(stepsize=params['theta'][1])
         
-        if 'electrons' in params and 'qubits' in params:
-            singles, doubles = qml.qchem.excitations(params['electrons'], params['qubits'])
-            print(len(singles)+len(doubles))
+        if 'electrons' in params and 'qubits' in params and 'sz' in params:
+            singles, doubles = qml.qchem.excitations(params['electrons'], params['qubits'], delta_sz= params['sz'])
+            #print(len(singles)+len(doubles))
             self.operator_pool = [ doubles, singles ]
 
 
