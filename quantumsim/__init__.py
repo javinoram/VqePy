@@ -4,4 +4,4 @@ from quantumsim.optimizers import *
 from quantumsim.lattice import *
 
 
-package_version = '1.0.0'
+package_version = '1.0.1'

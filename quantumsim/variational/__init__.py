@@ -1,3 +1,3 @@
-from .optimizacion_structure import *
-from .variational_quantum_eigensolver import *
-from .adaptative import *
+from .struct import *
+from .vqe import *
+from .adapt import *
