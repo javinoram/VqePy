@@ -35,7 +35,7 @@ class vqe_molecular(vqe_base):
             self.active_orbitals = params['active_orbitals']
 
         
-        aux_h, self.qubits = qchem.molecular_hamiltonian(
+        self.hamiltonian, self.qubits = qchem.molecular_hamiltonian(
             symbols= symbols,
             coordinates= coordinates,
             mapping= self.mapping,
@@ -46,10 +46,5 @@ class vqe_molecular(vqe_base):
             active_electrons=self.active_electrons, 
             active_orbitals=self.active_orbitals,
             load_data=True)
-        coeff, terms = aux_h.terms()
-        del aux_h
-
-        self.hamiltonian, self.coeff = qml.pauli.group_observables(observables=terms, coefficients=np.real(np.array(coeff)), 
-                grouping_type='qwc', method='rlf')
         return
 

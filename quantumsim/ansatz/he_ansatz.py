@@ -9,8 +9,10 @@ class he_ansatz(base_ansatz):
     pattern = "chain"
     begin_state = None
 
+    #def set_state(self, state):
+    #    self.begin_state = np.array([int(state[i]) for i in range(self.qubits)])
     def set_state(self, state):
-        self.begin_state = np.array([int(state[i]) for i in range(self.qubits)])
+        self.begin_state = state
 
     '''
     Funciones para la construccion del ansatz
@@ -55,7 +57,7 @@ class he_ansatz(base_ansatz):
     
 
     def circuit(self, theta, obs):
-        qml.BasisState(self.begin_state, wires=range(self.qubits))
+        qml.StatePrep(self.begin_state, wires=range(self.qubits))
 
         rotation_number = self.qubits
         for k in range(0, self.repetition):
@@ -63,5 +65,5 @@ class he_ansatz(base_ansatz):
             self.single_rotation(params)
             self.non_local_gates(0)
             
-        return [qml.expval(term) for term in obs ]
+        return qml.expval(obs)
 
