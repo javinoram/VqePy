@@ -20,10 +20,11 @@ class vqe_fermihubbard(vqe_base):
                 p1, p2 = pair
                 fermi_hopping +=  FermiC(2*(y*p1[0] + p1[1]))*FermiA(2*(y*p2[0] + p2[1])) + FermiC(2*(y*p2[0] + p2[1]))*FermiA(2*(y*p1[0] + p1[1]))
                 fermi_hopping +=  FermiC(2*(y*p1[0] + p1[1])+1)*FermiA(2*(y*p2[0] + p2[1])+1) + FermiC(2*(y*p2[0] + p2[1])+1)*FermiA(2*(y*p1[0] + p1[1])+1)
+
             fermi_sentence = hopping*fermi_hopping
 
             #U term
-            if 'U' in params['interactions']:
+            if 'U' in params:
                 Upotential = params["U"]
                 fermi_U = 0.0
                 for node in lattice_node:
@@ -32,7 +33,7 @@ class vqe_fermihubbard(vqe_base):
                 fermi_sentence += Upotential*fermi_U
 
             #E term
-            if 'E' in params['interactions']:
+            if 'E' in params:
                 Efield = params["E"]
                 fermi_E = 0.0
                 for node in lattice_node:
@@ -42,7 +43,7 @@ class vqe_fermihubbard(vqe_base):
                 fermi_sentence += Efield*fermi_E
 
             #V term
-            if 'V' in params['interactions']:
+            if 'V' in params:
                 Vpotencial = params["V"]
                 fermi_V = 0.0
                 for pair in lattice_edge:
@@ -52,7 +53,9 @@ class vqe_fermihubbard(vqe_base):
                     fermi_V += n_i*n_j
                 fermi_sentence += Vpotencial*fermi_V
 
+
         coeff, terms = qml.jordan_wigner( fermi_sentence, ps=True ).hamiltonian().terms()
+
         to_delete = []
         for i,c in enumerate(coeff):
             if c==0.0:
@@ -65,6 +68,5 @@ class vqe_fermihubbard(vqe_base):
             coeff.pop(index)
             terms.pop(index)
 
-        self.hamiltonian, self.coeff = qml.pauli.group_observables(observables=terms, coefficients=np.real(np.array(coeff)), 
-                grouping_type='qwc', method='rlf')
+        self.hamiltonian = qml.Hamiltonian(np.real(np.array(coeff)), terms)
         return

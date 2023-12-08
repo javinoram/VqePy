@@ -22,10 +22,10 @@ class vqe_spin(vqe_base):
                 termy = qml.PauliY(wires=[ x*pair[0][0] + pair[0][1]])@qml.PauliY(wires=[x*pair[1][0] + pair[1][1]])
 
                 terms.extend( [termx, termy, termz] )
-                coeff.extend( [-params["J"][0]/4.0, -params["J"][1]/4.0, -params["J"][2]/4.0] )
+                coeff.extend( [-params["Jx"][0]/4.0, -params["Jy"][1]/4.0, -params["Jz"][2]/4.0] )
 
             #h term
-            if 'magnetic' in params['interactions']:
+            if 'h' in params:
                 for pair in lattice_node:
                     termz = qml.PauliZ(wires=[ x*pair[0] + pair[1]])
                     termz = qml.PauliX(wires=[ x*pair[0] + pair[1]])
@@ -44,7 +44,6 @@ class vqe_spin(vqe_base):
             coeff.pop(index)
             terms.pop(index)
 
-        self.hamiltonian, self.coeff = qml.pauli.group_observables(observables=terms, coefficients=np.real(np.array(coeff)), 
-                grouping_type='qwc', method='rlf')
+        self.hamiltonian = qml.Hamiltonian(np.real(np.array(coeff)), terms)
         return
     

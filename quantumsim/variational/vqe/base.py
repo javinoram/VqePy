@@ -14,14 +14,9 @@ class vqe_base():
     qubits = 0
     node = None
 
-    def process_group(self, theta, i):
-        result = self.node( theta=theta, obs= self.hamiltonian[i] )
-        result = np.array(self.coeff[i]) @ np.array(result)
-        return result 
-    
     def cost_function(self, theta):
-        results = [ self.process_group(theta, i) for i in range(len(self.hamiltonian)) ]
-        return np.sum( results )
+        result = self.node( theta=theta, obs=self.hamiltonian )
+        return result
     
     #Cantidades utiles de saber
     #Probabilidad de cada uno de los estados basales segun el estado obtenido
@@ -29,24 +24,24 @@ class vqe_base():
         combos = itertools.product([0, 1], repeat=self.qubits)
         s = [list(c) for c in combos]
         pro = [ qml.Projector(state, wires=range(self.qubits)) for state in s]
-        result = [self.node( theta=theta, obs=[state])[0] for state in pro]
+        result = [self.node( theta=theta, obs=state) for state in pro]
         return result, s
     
     #Espin total del estado
     def get_totalspinS(self, theta, electrons):
         s_square = qml.qchem.spin2(electrons, self.qubits)
-        result = self.node( theta=theta, obs=[s_square] )[0]
+        result = self.node( theta=theta, obs=s_square )
         return result
     
     #Espin total proyectado en S_z del estado
     def get_totalspinSz(self, theta, electrons):
         s_z = qml.qchem.spinz(electrons, self.qubits)
-        result = self.node( theta=theta, obs=[s_z] )[0]
+        result = self.node( theta=theta, obs=s_z )
         return result
     
     #Numero de particulas del estado
-    def get_totalspinSz(self, theta, electrons):
+    def get_particlenumber(self, theta, electrons):
         n = qml.qchem.particle_number(self.qubits)
-        result = self.node( theta=theta, obs=[n] )[0]
+        result = self.node( theta=theta, obs=n )
         return result
 
