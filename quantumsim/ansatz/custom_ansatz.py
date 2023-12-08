@@ -6,9 +6,10 @@ class custom_ansatz(base_ansatz):
     begin_state = None
     excitations = []
     
-    def set_state(self, electrons):
-        self.begin_state = qml.qchem.hf_state(electrons=electrons, orbitals=self.qubits)
-
+    #def set_state(self, electrons):
+    #    self.begin_state = qml.qchem.hf_state(electrons=electrons, orbitals=self.qubits)
+    def set_state(self, state):
+        self.begin_state = state
 
     def set_gates(self, singles=None, doubles=None):
         self.excitations = []
@@ -23,7 +24,8 @@ class custom_ansatz(base_ansatz):
     
 
     def circuit(self, theta, obs):
-        qml.BasisState(self.begin_state, wires=range(self.qubits))
+        #qml.BasisState(self.begin_state, wires=range(self.qubits))
+        qml.StatePrep(self.begin_state, wires=range(self.qubits))
 
         for i, gate in enumerate(self.excitations):
             if len(gate) == 4:
@@ -31,5 +33,5 @@ class custom_ansatz(base_ansatz):
             elif len(gate) == 2:
                 qml.SingleExcitation(theta[i], wires=gate)
 
-        return [qml.expval(term) for term in obs ]
+        return qml.expval(obs)
     
