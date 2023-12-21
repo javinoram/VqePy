@@ -5,4 +5,4 @@ from quantumsim.lattice import *
 from quantumsim.beginstate import *
 
 
-package_version = '1.0.1'
+package_version = '1.0.0'

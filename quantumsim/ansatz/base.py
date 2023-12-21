@@ -47,5 +47,6 @@ class base_ansatz():
         
         if params['repetitions']:
             self.repetition = params['repetitions']
+        
         self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
         return
