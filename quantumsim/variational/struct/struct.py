@@ -6,10 +6,6 @@ from pennylane import numpy as np
 class structure_molecular():
     symbols = None
     coordinates = None
-
-    groups_caractericts = None
-    coeff_object = None
-    parity_terms = None
     begin_state = None
 
     mapping= 'jordan_wigner'
@@ -19,6 +15,7 @@ class structure_molecular():
     method='dhf'
 
     node = None
+    interface = None
 
     def __init__(self, symbols, coordinates, params= None):
         self.symbols = symbols
@@ -51,30 +48,28 @@ class structure_molecular():
         self.begin_state = qml.qchem.hf_state(int(self.qubits/2), self.qubits)
         return
     
+    def set_node(self, node, interface) -> None:
+        self.node = node
+        self.interface = interface
+        return
     
-    def process_group(self, theta, h_object, coeff_object):
-        expval = np.array( self.node( theta=theta, obs=h_object) )
-        coeff = np.array(coeff_object)
-        result = coeff @ expval
-        return result
     
-
     def grad_x(self, theta, x):
-        grad = []
         delta = 0.01
+        n = len(x)
+        shift = np.eye( n ) * 0.5 * delta
+        grad = [ self.node( theta=theta, obs=((self.H(x + shift[i]) - self.H(x - shift[i])) / delta) ) for i in range(n)]
+        #shift = np.zeros_like(x)
 
-        for i in range(len(x)):
-            shift = np.zeros_like(x)
-            shift[i] += 0.5 * delta
+        #for i in range(len(x)):
+        #    shift[i] += 0.5 * delta
 
-            coeff, terms = ((self.H(x + shift) - self.H(x - shift)) * delta**-1).terms()
+        #    hamiltonian = ((self.H(x + shift) - self.H(x - shift)) / delta)
+            
+        #    result = self.node( theta=theta, obs=hamiltonian )
 
-            if len(terms)==0:
-                grad.append( 0.0 )
-            else:
-                terms, coeff = qml.pauli.group_observables(observables=terms, coefficients=coeff, grouping_type='qwc', method='rlf')
-                expval = np.array( [ self.process_group(theta, terms[i], coeff[i]) for i in range(len(terms)) ] )
-                grad.append( np.sum( expval ) )
+        #    shift[i] = 0.0
+        #    grad.append( result )
         return np.array(grad)
     
 
@@ -83,8 +78,6 @@ class structure_molecular():
     
 
     def cost_function(self, theta, x):
-        coeff, terms = self.H(x).terms()
-        terms, coeff = qml.pauli.group_observables(observables=terms, coefficients=coeff, grouping_type='qwc', method='rlf')
-        result = np.array( [ self.process_group(theta, terms[i], coeff[i]) for i in range(len(terms)) ] )
-        result = np.sum( result )
-        return result 
+        hamiltonian = self.H(x)
+        result = self.node( theta=theta, obs=hamiltonian )
+        return result
