@@ -1,6 +1,10 @@
 import pennylane as qml
 from pennylane import numpy as np
 from quantumsim.optimizers import *
+import jax
+import jax.numpy as jnp
+import optax
+jax.config.update("jax_enable_x64", True)
 
 class gradiend_optimizer():
     maxiter = 100
@@ -39,19 +43,21 @@ class gradiend_optimizer():
         self.begin_state = np.random.random( size=self.number )*(np.pi/180.0)
 
 
-
+   
     def VQE(self, cost_function):
         theta = self.begin_state
         energy = [cost_function(theta)]
         theta_evol = [theta]
 
-        for _ in range(self.maxiter):
+        for n in range(self.maxiter):
             theta.requires_grad = True
             theta = self.theta_optimizer.step(cost_function, theta)
             energy.append(cost_function(theta))
             theta_evol.append(theta)
             prev_energy = energy[len(energy)-2]
             conv = np.abs(energy[-1] - prev_energy)
+            if n % 1 == 0:
+                print(f"Step = {n},  Energy = {energy[-1]:.8f} Ha")
             if conv <= self.tol:
                 break
         return energy, theta

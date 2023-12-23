@@ -42,7 +42,7 @@ class vqe_base():
     
     #Espin total proyectado en S_z del estado
     def get_totalspinSz(self, theta, electrons):
-        s_z = qml.qchem.spinz(electrons, self.qubits)
+        s_z = qml.qchem.spinz(self.qubits)
         result = self.node( theta=theta, obs=s_z )
         return result
     
