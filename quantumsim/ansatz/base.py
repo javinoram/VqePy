@@ -1,5 +1,6 @@
 import pennylane as qml
 from pennylane import numpy as np
+import jax
 
 class base_ansatz():
     base = ""
@@ -48,5 +49,9 @@ class base_ansatz():
         if params['repetitions']:
             self.repetition = params['repetitions']
         
-        self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
+        if params['interface'] == "jax" or params['interface'] == "jax-jit":
+            node = qml.QNode(self.circuit, self.device, interface=params['interface'])
+            self.node = jax.jit(node)
+        else:
+            self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
         return

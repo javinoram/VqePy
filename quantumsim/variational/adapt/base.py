@@ -45,8 +45,18 @@ class adap_base():
         return
 
     def set_node(self, params) -> None:
-        self.repetition = params['repetitions']
-        self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
+        if "pattern" in params:
+            self.pattern = params["pattern"]
+        
+        if params['repetitions']:
+            self.repetition = params['repetitions']
+
+            
+        if params['interface'] == "jax" or params['interface'] == "jax-jit":
+            node = qml.QNode(self.circuit, self.device, interface=params['interface'])
+            self.node = jax.jit(node)
+        else:
+            self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
         return
     
     def set_state(self, electrons):
