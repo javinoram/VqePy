@@ -59,17 +59,6 @@ class structure_molecular():
         n = len(x)
         shift = np.eye( n ) * 0.5 * delta
         grad = [ self.node( theta=theta, obs=((self.H(x + shift[i]) - self.H(x - shift[i])) / delta) ) for i in range(n)]
-        #shift = np.zeros_like(x)
-
-        #for i in range(len(x)):
-        #    shift[i] += 0.5 * delta
-
-        #    hamiltonian = ((self.H(x + shift) - self.H(x - shift)) / delta)
-            
-        #    result = self.node( theta=theta, obs=hamiltonian )
-
-        #    shift[i] = 0.0
-        #    grad.append( result )
         return np.array(grad)
     
 

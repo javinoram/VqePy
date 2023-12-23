@@ -12,3 +12,5 @@ networkx
 basis-set-exchange
 ipykernel
 pennylane-lightning
+jaxopt
+optax
