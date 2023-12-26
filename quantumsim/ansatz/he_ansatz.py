@@ -9,8 +9,6 @@ class he_ansatz(base_ansatz):
     pattern = "chain"
     begin_state = None
 
-    #def set_state(self, state):
-    #    self.begin_state = np.array([int(state[i]) for i in range(self.qubits)])
     def set_state(self, state):
         self.begin_state = state
 
@@ -20,7 +18,6 @@ class he_ansatz(base_ansatz):
     def single_rotation(self, params):
         for i in range(0, self.qubits):
             qml.RY(params[i], wires=[i])
-            #qml.U3(params[i][0], params[i][1], params[i][2], wires=[i])
         return
 
     def non_local_gates(self, flag=0):
@@ -58,7 +55,6 @@ class he_ansatz(base_ansatz):
 
     def circuit(self, theta, obs):
         qml.StatePrep(self.begin_state, wires=range(self.qubits))
-
         rotation_number = self.qubits
         for k in range(0, self.repetition):
             params = theta[k*rotation_number:(k+1)*rotation_number]
@@ -66,4 +62,14 @@ class he_ansatz(base_ansatz):
             self.non_local_gates(0)
             
         return qml.expval(obs)
+
+
+    def circuit_state(self, theta):
+        qml.StatePrep(self.begin_state, wires=range(self.qubits))
+        rotation_number = self.qubits
+        for k in range(0, self.repetition):
+            params = theta[k*rotation_number:(k+1)*rotation_number]
+            self.single_rotation(params)
+            self.non_local_gates(0)
+        return qml.state()
 

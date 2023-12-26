@@ -3,9 +3,11 @@ from pennylane import numpy as np
 import jax
 
 class base_ansatz():
-    base = ""
+    base = "default.qubit"
     backend = ""
     token = ""
+    interface = "autograd"
+    diff_method = "best"
 
     device= None
     node = None
@@ -49,9 +51,24 @@ class base_ansatz():
         if params['repetitions']:
             self.repetition = params['repetitions']
         
+        if params['interface']:
+            self.interface= params['interface']
+        
+        if params['diff_method']:
+            self.diff_method = params['diff_method']
+        
         if params['interface'] == "jax" or params['interface'] == "jax-jit":
-            node = qml.QNode(self.circuit, self.device, interface=params['interface'])
+            node = qml.QNode(self.circuit, self.device, interface=self.interface, diff_method=self.diff_method)
             self.node = jax.jit(node)
         else:
-            self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
+            self.node = qml.QNode(self.circuit, self.device, interface=self.interface, diff_method=self.diff_method)
         return
+    
+
+    def get_state(self, theta):
+        if self.interface == "jax" or self.interface == "jax-jit":
+            node = qml.QNode(self.circuit_state, self.device, interface=self.interface, diff_method=self.diff_method)
+            node = jax.jit(node)
+        else:
+            node = qml.QNode(self.circuit_state, self.device, interface=self.interface, diff_method=self.diff_method)
+        return node(theta)

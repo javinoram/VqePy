@@ -73,25 +73,25 @@ class scipy_optimizer():
         return energy, theta
     
 
-    def VQD(self, cost_function, overlap_cost_function, k):
-        energy = []
-        previous_theta = []
+    #def VQD(self, cost_function, overlap_cost_function, k):
+    #    energy = []
+    #    previous_theta = []
 
-        for i in range(k):  
-            print("state ", i+1)
+    #    for i in range(k):  
+    #        print("state ", i+1)
 
-            def cost_aux(x): 
-                result = cost_function(x) 
-                for j, previous in enumerate(previous_theta):
-                    result += 10*overlap_cost_function(x, previous)
-                return result
+    #        def cost_aux(x): 
+    #            result = cost_function(x) 
+    #            for j, previous in enumerate(previous_theta):
+    #                result += 10*overlap_cost_function(x, previous)
+    #            return result
         
-            self.nit = 0
-            ops = {'maxiter': self.maxiter}
-            xs = sc.optimize.minimize(cost_aux, self.begin_state, method=self.type_method,
-                    callback=self.callback, tol=self.tol, options=ops)['x']
-            energy.append( cost_function(xs) )
-            previous_theta.append(xs)
-        return energy, previous_theta
+    #        self.nit = 0
+    #        ops = {'maxiter': self.maxiter}
+    #        xs = sc.optimize.minimize(cost_aux, self.begin_state, method=self.type_method,
+    #                callback=self.callback, tol=self.tol, options=ops)['x']
+    #        energy.append( cost_function(xs) )
+    #        previous_theta.append(xs)
+    #    return energy, previous_theta
 
 
