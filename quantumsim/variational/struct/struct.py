@@ -13,6 +13,8 @@ class structure_molecular():
     mult= 1
     basis='sto-3g'
     method='dhf'
+    active_electrons = None
+    active_orbitals = None
 
     node = None
     interface = None
@@ -21,20 +23,26 @@ class structure_molecular():
         self.symbols = symbols
         self.coordinates = coordinates
         
-        if params['mapping']:
+        if 'mapping' in params:
             self.mapping = params['mapping']
-        
-        if params['charge']:
+            
+        if 'charge' in params:
             self.charge = params['charge']
 
-        if params['mult']:
+        if 'mult' in params:
             self.mult = params['mult']
 
         if 'basis' in params:
             self.basis = params['basis']
-        
-        if params['method']:
+
+        if 'method' in params:
             self.method = params['method']
+            
+        if 'active_electrons' in params:
+            self.active_electrons = params['active_electrons']
+
+        if 'active_orbitals' in params:
+            self.active_orbitals = params['active_orbitals']
 
         _, self.qubits = qchem.molecular_hamiltonian(
             symbols= symbols,
@@ -43,9 +51,12 @@ class structure_molecular():
             charge= self.charge,
             mult= self.mult,
             basis= self.basis,
-            method= self.method)
+            method= self.method,
+            active_electrons=self.active_electrons,
+            active_orbitals=self.active_orbitals,
+            load_data=True)
         
-        self.begin_state = qml.qchem.hf_state(int(self.qubits/2), self.qubits)
+        self.begin_state = qml.qchem.hf_state(self.active_electrons, self.qubits)
         return
     
     def set_node(self, node, interface) -> None:
@@ -63,8 +74,17 @@ class structure_molecular():
     
 
     def H(self, x):
-        return qml.qchem.molecular_hamiltonian(self.symbols, x, mult= self.mult, charge=self.charge)[0]
-    
+        H, q = qchem.molecular_hamiltonian(symbols= self.symbols,
+            coordinates= x,
+            mapping= self.mapping,
+            charge= self.charge,
+            mult= self.mult,
+            basis= self.basis,
+            method= self.method,
+            active_electrons=self.active_electrons,
+            active_orbitals=self.active_orbitals,
+            load_data=True)
+        return H    
 
     def cost_function(self, theta, x):
         hamiltonian = self.H(x)

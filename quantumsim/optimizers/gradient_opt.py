@@ -1,10 +1,6 @@
 import pennylane as qml
 from pennylane import numpy as np
 from quantumsim.optimizers import *
-import jax
-import jax.numpy as jnp
-import optax
-jax.config.update("jax_enable_x64", True)
 
 class gradiend_optimizer():
     maxiter = 100
@@ -14,6 +10,9 @@ class gradiend_optimizer():
     tol = 1e-6
     number = 0
     begin_state= None
+
+    get_energy = False
+    get_params = False
 
     def __init__(self, params):
         self.number = params["number"]
@@ -43,31 +42,39 @@ class gradiend_optimizer():
         self.begin_state = np.random.random( size=self.number )*(np.pi/180.0)
 
 
-   
     def VQE(self, cost_function):
         theta = self.begin_state
-        energy = [cost_function(theta)]
+        energy_evol = [cost_function(theta)]
         theta_evol = [theta]
 
         for n in range(self.maxiter):
             theta.requires_grad = True
             theta = self.theta_optimizer.step(cost_function, theta)
-            energy.append(cost_function(theta))
+
+            energy_evol.append(cost_function(theta))
             theta_evol.append(theta)
-            prev_energy = energy[len(energy)-2]
-            conv = np.abs(energy[-1] - prev_energy)
-            if n % 1 == 0:
-                print(f"Step = {n},  Energy = {energy[-1]:.8f} Ha")
+
+            prev_energy = energy_evol[-2]
+            conv = np.abs(energy_evol[-1] - prev_energy)
             if conv <= self.tol:
                 break
-        return energy, theta
+        
+        if self.get_energy == True and self.get_params == True:
+            return energy_evol, theta_evol
+        else:
+            if self.get_energy == True:
+                return energy_evol, theta_evol[-1]
+            elif self.get_params== True:
+                return energy_evol[-1], theta_evol
+            else:
+                return energy_evol[-1], theta_evol[-1]
            
 
 
     def OS(self, cost_function, x, grad):
         theta = self.begin_state
-        x_evol = [x]
-        energy_evol = [cost_function(theta, x)]
+        theta_evol = [ np.concatenate( (x, theta)) ]
+        energy_evol = [ cost_function( theta, x ) ]
 
         for _ in range(self.maxiter):
             theta.requires_grad = True
@@ -77,41 +84,54 @@ class gradiend_optimizer():
             x.requires_grad = True
             theta.requires_grad = False
             _, x = self.x_optimizer.step(cost_function, theta, x, grad_fn=grad)
-            x_evol.append(x)
-            energy_evol.append(cost_function( theta,x ))
-            if np.max(grad(theta, x)) <= self.tol:
-                break
-        return x, x_evol, theta, energy_evol
-    
-    
-    def VQD(self, cost_function, overlap_cost_function, k):
-        previous_theta = []
-        energy_final = [] 
 
-        for i in range(k):
-            def cost_aux(x): 
-                result = cost_function(x) 
-                for previous in previous_theta:
-                    result += 10*overlap_cost_function(x, previous)
-                return result
+
+            theta_evol.append( np.concatenate( (x, theta) ) )
+            energy_evol.append( cost_function( theta,x ) )
+
+            print(energy_evol[-1])
+            if np.max( grad(theta, x) ) <= self.tol:
+                break
         
-            print("state ", i+1)
-            self.nit = 0
+        if self.get_energy == True and self.get_params == True:
+            return energy_evol, theta_evol
+        else:
+            if self.get_energy == True:
+                return energy_evol, theta_evol[-1]
+            elif self.get_params== True:
+                return energy_evol[-1], theta_evol
+            else:
+                return energy_evol[-1], theta_evol[-1]
+    
+    
+    #def VQD(self, cost_function, overlap_cost_function, k):
+    #    previous_theta = []
+    #    energy_final = [] 
+
+    #    for i in range(k):
+    #        def cost_aux(x): 
+    #            result = cost_function(x) 
+    #            for previous in previous_theta:
+    #                result += 10*overlap_cost_function(x, previous)
+    #            return result
+        
+    #        print("state ", i+1)
+    #        self.nit = 0
 
             
-            theta = self.begin_state
-            energy = [cost_function(theta)]
-            theta_evol = [theta]
-            for _ in range(self.maxiter):
-                theta.requires_grad = True
-                theta = self.theta_optimizer.step(cost_aux, theta)
-                energy.append(cost_function(theta))
-                theta_evol.append(theta)
-                prev_energy = energy[len(energy)-2]
+    #        theta = self.begin_state
+    #        energy = [cost_function(theta)]
+    #        theta_evol = [theta]
+    #        for _ in range(self.maxiter):
+    #            theta.requires_grad = True
+    #            theta = self.theta_optimizer.step(cost_aux, theta)
+    #            energy.append(cost_function(theta))
+    #            theta_evol.append(theta)
+    #            prev_energy = energy[len(energy)-2]
 
-                conv = np.abs(energy[-1] - prev_energy)
-                if conv <= self.tol:
-                    break
-            energy_final.append( energy[-1] )
-            previous_theta.append( theta )
-        return energy_final, previous_theta
+    #               conv = np.abs(energy[-1] - prev_energy)
+    #            if conv <= self.tol:
+    #                break
+    #        energy_final.append( energy[-1] )
+    #        previous_theta.append( theta )
+    #    return energy_final, previous_theta

@@ -26,7 +26,9 @@ class vqe_base():
     
 
     #Cantidades utiles de saber
-    #Probabilidad de cada uno de los estados basales segun el estado obtenido
+    #Theta corresponde al vector de parametros del circuito
+    #que construye el estado obtenido de un proceso
+    #de minimizacion
     def get_projections(self, theta):
         combos = itertools.product([0, 1], repeat=self.qubits)
         s = [list(c) for c in combos]
@@ -41,13 +43,13 @@ class vqe_base():
         return result
     
     #Espin total proyectado en S_z del estado
-    def get_totalspinSz(self, theta, electrons):
+    def get_totalspinSz(self, theta):
         s_z = qml.qchem.spinz(self.qubits)
         result = self.node( theta=theta, obs=s_z )
         return result
     
     #Numero de particulas del estado
-    def get_particlenumber(self, theta, electrons):
+    def get_particlenumber(self, theta):
         n = qml.qchem.particle_number(self.qubits)
         result = self.node( theta=theta, obs=n )
         return result

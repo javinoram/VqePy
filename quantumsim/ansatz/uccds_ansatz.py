@@ -19,3 +19,8 @@ class uccds_ansatz(base_ansatz):
     def circuit(self, theta, obs):
         qml.UCCSD(theta, range(self.qubits), self.singles, self.doubles, self.begin_state)
         return qml.expval(obs)
+    
+
+    def circuit_state(self, theta):
+        qml.UCCSD(theta, range(self.qubits), self.singles, self.doubles, self.begin_state)
+        return qml.state()
