@@ -2,7 +2,7 @@ import pennylane as qml
 from pennylane import numpy as np
 from .base import *
 
-class upccgsd_ansatz(base_ansatz):
+class kupccgsd_ansatz(base_ansatz):
     sz = 0
     begin_state = None
 
@@ -19,3 +19,11 @@ class upccgsd_ansatz(base_ansatz):
         qml.kUpCCGSD(theta, wires=range(self.qubits),
             k=self.repetition, delta_sz=0, init_state=self.begin_state)
         return qml.expval(obs)
+    
+    def circuit_state(self, theta):
+        theta = theta.reshape( qml.kUpCCGSD.shape(k=self.repetition, 
+            n_wires=self.qubits, delta_sz=self.sz) )
+        
+        qml.kUpCCGSD(theta, wires=range(self.qubits),
+            k=self.repetition, delta_sz=0, init_state=self.begin_state)
+        return qml.state()

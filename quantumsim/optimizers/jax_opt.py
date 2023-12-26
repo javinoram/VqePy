@@ -11,10 +11,12 @@ class jax_optimizer():
     maxiter = 100
     theta_optimizer = None
     x_optimizer = None
-    tensor_metric = None
     tol = 1e-6
     number = 0
     begin_state= None
+
+    get_energy = False
+    get_params = False
 
     def __init__(self, params):
         self.number = params["number"]
@@ -40,29 +42,35 @@ class jax_optimizer():
         self.begin_state = np.random.random( size=self.number )*(np.pi/180.0)
 
 
-
     def VQE(self, cost_fn):
-        theta = jnp.array(self.begin_state)
+        theta = jnp.array( self.begin_state )
         opt_state = self.theta_optimizer.init(theta)
         
-        energy = [cost_fn(theta)]
-        angle = [theta]
+        energy_evol = [cost_fn(theta)]
+        theta_evol = [theta]
 
         for n in range(self.maxiter):
+
             grads = jax.grad(cost_fn)(theta)
             updates, opt_state = self.theta_optimizer.update(grads, opt_state)
             theta = optax.apply_updates(theta, updates)
 
-            energy.append(cost_fn(theta))
-            angle.append(theta)
+            energy_evol.append(cost_fn(theta))
+            theta_evol.append(theta)
 
-            conv = jnp.abs(energy[-1] - energy[-2])
-            if n % 1 == 0:
-                print(f"Step = {n},  Energy = {energy[-1]:.8f} Ha")
-
+            conv = jnp.abs(energy_evol[-1] - energy_evol[-2])
             if conv <= self.tol:
                 break
-        return energy, theta
+        
+        if self.get_energy == True and self.get_params == True:
+            return energy_evol, theta_evol
+        else:
+            if self.get_energy == True:
+                return energy_evol, theta_evol[-1]
+            elif self.get_params== True:
+                return energy_evol[-1], theta_evol
+            else:
+                return energy_evol[-1], theta_evol[-1]
     
 
     def OS(self, cost_fn, x, grad):
@@ -70,7 +78,7 @@ class jax_optimizer():
         opt_state_theta = self.theta_optimizer.init(theta)
 
         opt_state_x = self.x_optimizer.init(x)
-        x_evol = [x]
+        theta_evol = [ jnp.concatenate( (x, theta) ) ]
         energy_evol = [cost_fn(theta, x)]
 
         for n in range(self.maxiter):
@@ -80,13 +88,22 @@ class jax_optimizer():
 
 
             updates_x, opt_state_x = self.x_optimizer.update(grads, opt_state_x)
-            x = optax.apply_updates(x, updates_x)
+            x = optax.apply_updates( x, updates_x )
 
-            x_evol.append(x)
-            energy_evol.append(cost_fn( theta, x ))
-            if jnp.max(grad(theta, x)) <= self.tol:
+            theta_evol.append( jnp.concatenate( (x, theta) ) )
+            energy_evol.append( cost_fn( theta, x ) )
+            if jnp.max( grad(theta, x) ) <= self.tol:
                 break
-        return x, x_evol, theta, energy_evol
+        
+        if self.get_energy == True and self.get_params == True:
+            return energy_evol, theta_evol
+        else:
+            if self.get_energy == True:
+                return energy_evol, theta_evol[-1]
+            elif self.get_params== True:
+                return energy_evol[-1], theta_evol
+            else:
+                return energy_evol[-1], theta_evol[-1]
 
 
 

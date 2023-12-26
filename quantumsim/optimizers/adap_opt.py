@@ -16,7 +16,7 @@ class adap_optimizer():
     maxiter = 20
     optimizer = None
     operator_pool = None
-    tol = 1e-5
+    tol = 1e-6
 
     def __init__(self, params):
         
@@ -33,7 +33,6 @@ class adap_optimizer():
             singles, doubles = qml.qchem.excitations(params['electrons'], params['qubits'], delta_sz= params['sz'])
             #print(len(singles)+len(doubles))
             self.operator_pool = [ doubles, singles ]
-
 
 
 
