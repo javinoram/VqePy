@@ -52,9 +52,11 @@ class structure_molecular():
             mult= self.mult,
             basis= self.basis,
             method= self.method,
+            active_electrons=self.active_electrons,
+            active_orbitals=self.active_orbitals,
             load_data=True)
         
-        self.begin_state = qml.qchem.hf_state(int(self.qubits/2), self.qubits)
+        self.begin_state = qml.qchem.hf_state(self.active_electrons, self.qubits)
         return
     
     def set_node(self, node, interface) -> None:
@@ -79,7 +81,9 @@ class structure_molecular():
             mult= self.mult,
             basis= self.basis,
             method= self.method,
-            load_data=True )
+            active_electrons=self.active_electrons,
+            active_orbitals=self.active_orbitals,
+            load_data=True)
         return H    
 
     def cost_function(self, theta, x):
