@@ -2,7 +2,14 @@ import pennylane as qml
 from pennylane import numpy as np
 from quantumsim.optimizers import *
 
+"""
+Clase del optimizador de gradiente (gradientes implementados en la libreria pennylane), 
+el objetivo es calcular algunos flujos como el VQE o la optimizacion de estructuras.
+"""
 class gradiend_optimizer():
+    """
+    Variables de la clase
+    """
     maxiter = 100
     theta_optimizer = None
     x_optimizer = None
@@ -10,10 +17,15 @@ class gradiend_optimizer():
     tol = 1e-6
     number = 0
     begin_state= None
-
     get_energy = False
     get_params = False
 
+
+    """
+    Constructor de la clase
+    input: 
+        params: diccionario con los parametros del optimizador
+    """
     def __init__(self, params):
         self.number = params["number"]
 
@@ -42,6 +54,14 @@ class gradiend_optimizer():
         self.begin_state = np.random.random( size=self.number )*(np.pi/180.0)
 
 
+    """
+    Funcion que ejecuta el flujo del VQE
+    input: 
+        cost_function: funcion de coste para el optimizador.
+    output:
+        energy_evol: lista con los valores de energia en cada iteracion.
+        theta_evol: lista con los parametros del circuito en cada iteracion.
+    """
     def VQE(self, cost_function):
         theta = self.begin_state
         energy_evol = [cost_function(theta)]
@@ -70,7 +90,17 @@ class gradiend_optimizer():
                 return energy_evol[-1], theta_evol[-1]
            
 
-
+    """
+    Funcion que ejecuta el flujo del VQE para la relajacion de distancias entre moleculas
+    input: 
+        cost_function: funcion de coste para el optimizador
+        x: posiciones iniciales de los elementos de la molecula
+        grad: funcion que corresponde al gradiente de las posiciones de los elementos
+    output:
+        energy_evol: lista con los valores de energia en cada iteracion.
+        theta_evol: lista con los parametros del circuito y las posiciones de los elementos
+             en cada iteracion.
+    """
     def OS(self, cost_function, x, grad):
         theta = self.begin_state
         theta_evol = [ np.concatenate( (x, theta)) ]
@@ -89,7 +119,7 @@ class gradiend_optimizer():
             theta_evol.append( np.concatenate( (x, theta) ) )
             energy_evol.append( cost_function( theta,x ) )
 
-            print(energy_evol[-1])
+
             if np.max( grad(theta, x) ) <= self.tol:
                 break
         
@@ -103,35 +133,3 @@ class gradiend_optimizer():
             else:
                 return energy_evol[-1], theta_evol[-1]
     
-    
-    #def VQD(self, cost_function, overlap_cost_function, k):
-    #    previous_theta = []
-    #    energy_final = [] 
-
-    #    for i in range(k):
-    #        def cost_aux(x): 
-    #            result = cost_function(x) 
-    #            for previous in previous_theta:
-    #                result += 10*overlap_cost_function(x, previous)
-    #            return result
-        
-    #        print("state ", i+1)
-    #        self.nit = 0
-
-            
-    #        theta = self.begin_state
-    #        energy = [cost_function(theta)]
-    #        theta_evol = [theta]
-    #        for _ in range(self.maxiter):
-    #            theta.requires_grad = True
-    #            theta = self.theta_optimizer.step(cost_aux, theta)
-    #            energy.append(cost_function(theta))
-    #            theta_evol.append(theta)
-    #            prev_energy = energy[len(energy)-2]
-
-    #               conv = np.abs(energy[-1] - prev_energy)
-    #            if conv <= self.tol:
-    #                break
-    #        energy_final.append( energy[-1] )
-    #        previous_theta.append( theta )
-    #    return energy_final, previous_theta

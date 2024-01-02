@@ -2,6 +2,10 @@ import pennylane as qml
 from pennylane import numpy as np
 import jax
 
+"""
+Clase padre de los ansatz, donde se definen las caracteristicas y funciones
+que todo ansatz debe tener.
+"""
 class base_ansatz():
     base = "default.qubit"
     backend = ""
@@ -14,6 +18,12 @@ class base_ansatz():
     qubits = 0
     repetition = 0
 
+    """
+    Funcion para setear caracteristicas del entorno de ejecucion del circuito
+    input:
+        params: diccionario de parametros para inicializar el entorno de ejecucion 
+        del circuito
+    """
     def set_device(self, params) -> None:
         self.base = params['base']
         self.qubits = params["qubits"]
@@ -43,7 +53,11 @@ class base_ansatz():
             self.device= qml.device(self.base, wires=self.qubits)
         return
     
-    
+    """
+    Funcion para setear caracteristicas del ejecutor del circuito
+    input:
+        params: diccionario de parametros para inicializar el ejecutor del circuito
+    """
     def set_node(self, params) -> None:
         if "pattern" in params:
             self.pattern = params["pattern"]
@@ -65,6 +79,14 @@ class base_ansatz():
         return
     
 
+    """
+    Funcion para obtener el estado al final del circuito, despues de aplicar el ansatz, esto 
+    solo funciona con simuladores
+    input:
+        theta: vector de parametros del circuito
+    output:
+        estado: retorna el estado del circuito como un arreglo numpy
+    """
     def get_state(self, theta):
         if self.interface == "jax" or self.interface == "jax-jit":
             node = qml.QNode(self.circuit_state, self.device, interface=self.interface, diff_method=self.diff_method)

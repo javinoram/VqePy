@@ -1,6 +1,13 @@
 from .base import *
 
+"""
+Clase del modelo de moleculas, esta se encarga de construir el hamiltoniano,
+hereda metodos de la clase adap_base
+"""
 class adap_molecular(adap_base):
+    """
+    Variables extras de la clase
+    """
     mapping= 'jordan_wigner'
     charge= 0
     mult= 1
@@ -9,6 +16,13 @@ class adap_molecular(adap_base):
     active_electrons = None
     active_orbitals = None
 
+
+    """
+    Constructor de la clase
+        symbols: lista con los elementos de la molecula
+        coordinates: vector con las posiciones de los elementos en el espacio
+        params: diccionario con los parametros del hamiltoniano
+    """
     def __init__(self, symbols, coordinates, params= None):
         if 'mapping' in params:
             self.mapping = params['mapping']

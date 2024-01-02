@@ -1,3 +1,56 @@
 [build-system]
-requires = ['setuptools>=42']
-build-backend = 'setuptools.build_meta'
+build-backend = "setuptools.build_meta"
+requires = [
+  "setuptools >= 61.2.0",
+  "setuptools-scm >= 6.3.2",
+  "wheel >= 0.37.0",
+]
+
+[project]
+name = "vqepy"
+description = "An open source Python package for molecular and condensed matter VQE research"
+readme = "README.md"
+version = "1.0.0"
+keywords = [
+  "quantum chemistry",
+  "variational methods",
+  "condensed matter",
+]
+license = {file = "LICENSE.txt"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "pyscf",
+    "numpy",
+    "scipy",
+    "pennylane",
+    "pandas",
+    "matplotlib",
+    "jax[cpu]",
+    "pennylane-qiskit",
+    "qiskit_ibm_provider",
+    "pyyaml",
+    "networkx",
+    "basis-set-exchange",
+    "ipykernel",
+    "pennylane-lightning",
+    "jaxopt",
+    "optax",
+]
+
+[project.urls]
+Source = "https://github.com/javinoram/VqePy"
+website = "https://github.com/javinoram/VqePy"
+
+[tool.setuptools_scm]
+write_to = "quantumsim/_version.py"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"vqepy.quantumsim" = ["*"]
