@@ -1,9 +1,13 @@
 from .base import *
 
-'''
-Construtor del hamiltoniano molecular
-'''
+"""
+Clase para construir el hamiltoniano usado en el proceso de VQE, hereda metodos de la clase
+vqe_base
+"""
 class vqe_molecular(vqe_base):
+    """
+    Variables de la clase
+    """
     mapping= 'jordan_wigner'
     charge= 0
     mult= 1
@@ -12,6 +16,13 @@ class vqe_molecular(vqe_base):
     active_electrons = None
     active_orbitals = None
 
+
+    """
+    Constructor de la clase
+        symbols: lista con los elementos de la molecula
+        coordinates: vector con las posiciones de los elementos en el espacio
+        params: diccionario con los parametros del hamiltoniano
+    """
     def __init__(self, symbols, coordinates, params= None):
         if 'mapping' in params:
             self.mapping = params['mapping']

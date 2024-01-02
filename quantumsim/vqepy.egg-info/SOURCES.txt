@@ -6,8 +6,8 @@ quantumsim/ansatz/__init__.py
 quantumsim/ansatz/base.py
 quantumsim/ansatz/custom_ansatz.py
 quantumsim/ansatz/he_ansatz.py
+quantumsim/ansatz/kupccgsd_ansatz.py
 quantumsim/ansatz/uccds_ansatz.py
-quantumsim/ansatz/upccgsd_ansatz.py
 quantumsim/beginstate/__init__.py
 quantumsim/beginstate/beginstate.py
 quantumsim/lattice/__init__.py
@@ -15,6 +15,7 @@ quantumsim/lattice/lattice.py
 quantumsim/optimizers/__init__.py
 quantumsim/optimizers/adap_opt.py
 quantumsim/optimizers/gradient_opt.py
+quantumsim/optimizers/jax_opt.py
 quantumsim/optimizers/scipy_opt.py
 quantumsim/variational/__init__.py
 quantumsim/variational/adapt/__init__.py
@@ -28,7 +29,7 @@ quantumsim/variational/vqe/base.py
 quantumsim/variational/vqe/fermihubbard.py
 quantumsim/variational/vqe/molecular.py
 quantumsim/variational/vqe/spin.py
-quantumsim/vqesimulation.egg-info/PKG-INFO
-quantumsim/vqesimulation.egg-info/SOURCES.txt
-quantumsim/vqesimulation.egg-info/dependency_links.txt
-quantumsim/vqesimulation.egg-info/top_level.txt
+quantumsim/vqepy.egg-info/PKG-INFO
+quantumsim/vqepy.egg-info/SOURCES.txt
+quantumsim/vqepy.egg-info/dependency_links.txt
+quantumsim/vqepy.egg-info/top_level.txt

@@ -7,17 +7,29 @@ jax.config.update("jax_enable_x64", True)
 from pennylane import numpy as np
 from quantumsim.optimizers import *
 
+
+"""
+Clase del optimizador que utiliza los optimizadores asociados a la libreria JAX, 
+el objetivo es calcular algunos flujos como el VQE o la optimizacion de estructuras.
+"""
 class jax_optimizer():
+    """
+    Variables de la clase
+    """
     maxiter = 100
     theta_optimizer = None
     x_optimizer = None
     tol = 1e-6
     number = 0
     begin_state= None
-
     get_energy = False
     get_params = False
 
+    """
+    Constructor de la clase
+    input: 
+        params: diccionario con los parametros del optimizador
+    """
     def __init__(self, params):
         self.number = params["number"]
 
@@ -42,6 +54,14 @@ class jax_optimizer():
         self.begin_state = np.random.random( size=self.number )*(np.pi/180.0)
 
 
+    """
+    Funcion que ejecuta el flujo del VQE
+    input: 
+        cost_fn: funcion de coste para el optimizador.
+    output:
+        energy_evol: lista con los valores de energia en cada iteracion.
+        theta_evol: lista con los parametros del circuito en cada iteracion.
+    """
     def VQE(self, cost_fn):
         theta = jnp.array( self.begin_state )
         opt_state = self.theta_optimizer.init(theta)
@@ -71,39 +91,5 @@ class jax_optimizer():
                 return energy_evol[-1], theta_evol
             else:
                 return energy_evol[-1], theta_evol[-1]
-    
-
-    def OS(self, cost_fn, x, grad):
-        theta = self.begin_state
-        opt_state_theta = self.theta_optimizer.init(theta)
-
-        opt_state_x = self.x_optimizer.init(x)
-        theta_evol = [ jnp.concatenate( (x, theta) ) ]
-        energy_evol = [cost_fn(theta, x)]
-
-        for n in range(self.maxiter):
-            grads = jax.grad(cost_fn)(theta, x)
-            updates_theta, opt_state_theta = self.theta_optimizer.update(grads, opt_state_theta)
-            theta = optax.apply_updates(theta, updates_theta)
-
-
-            updates_x, opt_state_x = self.x_optimizer.update(grads, opt_state_x)
-            x = optax.apply_updates( x, updates_x )
-
-            theta_evol.append( jnp.concatenate( (x, theta) ) )
-            energy_evol.append( cost_fn( theta, x ) )
-            if jnp.max( grad(theta, x) ) <= self.tol:
-                break
-        
-        if self.get_energy == True and self.get_params == True:
-            return energy_evol, theta_evol
-        else:
-            if self.get_energy == True:
-                return energy_evol, theta_evol[-1]
-            elif self.get_params== True:
-                return energy_evol[-1], theta_evol
-            else:
-                return energy_evol[-1], theta_evol[-1]
-
 
 
