@@ -5,10 +5,16 @@ from quantumsim.lattice import *
 from pennylane import qchem
 from pennylane import FermiC, FermiA
 
+"""
+Clase base del proceso ADAPT-VQE, en esta se almacenan las variables y funciones generales, que son 
+independientes del sistema
+"""
 class adap_base():
+    """
+    Variables de la clase
+    """
     hamiltonian = None
     qubits = 0
-
     base = ""
     backend = ""
     token = ""
@@ -16,6 +22,12 @@ class adap_base():
     node = None
     begin_state = None
 
+    """
+    Funcion para setear caracteristicas del entorno de ejecucion del circuito
+    input:
+        params: diccionario de parametros para inicializar el entorno de ejecucion 
+        del circuito
+    """
     def set_device(self, params) -> None:
         self.base = params['base']
 
@@ -44,6 +56,12 @@ class adap_base():
             self.device= qml.device(self.base, wires=self.qubits)
         return
 
+
+    """
+    Funcion para setear caracteristicas del ejecutor del circuito
+    input:
+        params: diccionario de parametros para inicializar el ejecutor del circuito
+    """
     def set_node(self, params) -> None:
         if "pattern" in params:
             self.pattern = params["pattern"]
@@ -59,9 +77,26 @@ class adap_base():
             self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
         return
     
+
+    """
+    Funcion para setear el estado FH inicial del circuito
+    input:
+        electrons: numero de electrones del sistema
+    """
     def set_state(self, electrons):
         self.begin_state = qml.qchem.hf_state(electrons=electrons, orbitals=self.qubits)
 
+
+    """
+    Circuito pararametrizado para el proceso de ADAPT-VQE
+    input:
+        params: vector de parametros del circuito
+        excitations: lista de compuertas
+        params_select: lista de los parametros de las compuertas dobles seleccionadas
+        gates_select: lista de las compuertas dobles selecciondas
+    output:
+        valor: valor esperado del hamiltoniano
+    """
     def circuit(self, params, excitations, params_select=None, gates_select=None):
         qml.BasisState(self.begin_state, wires=range(self.qubits))
 

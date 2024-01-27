@@ -2,24 +2,46 @@ import pennylane as qml
 from pennylane import numpy as np
 from .base import *
 
-'''
-Hardware Efficient ansatz
-'''
+"""
+Clase de ansatz hardware efficient, esta construido para ser usado en sistemas de espines, 
+hereda metodos de la clase base_ansatz.
+
+Este ansatz esta hardcodeado para utilizar la variante de ansatz real amplitudes.
+"""
 class he_ansatz(base_ansatz):
+    """
+    Variables extras de la clase
+    """
     pattern = "chain"
     begin_state = None
 
+
+    """
+    Funcion para setear el estado inicial del circuito
+    input:
+        state: vector de tamaño 2**n que representa un estado cuantico inicial para el circuito
+    """
     def set_state(self, state):
         self.begin_state = state
 
-    '''
-    Funciones para la construccion del ansatz
-    '''
+
+    """
+    Funcion para agregar compuertas de rotacion al circuito
+    input:
+        params: lista de valores de parametros de las compuertas de reotacion
+    """
     def single_rotation(self, params):
         for i in range(0, self.qubits):
             qml.RY(params[i], wires=[i])
         return
 
+
+    """
+    Funcion para agregar compuertas no locales al circuito (compuertas que agregan correlaciones 
+    al circuito)
+    input:
+        flag: valor entero para determinar si se quieren colocar las compuertas en orden inverso o no
+    """
     def non_local_gates(self, flag=0):
         ## Compuertas en orden normal
         if flag == 0:
@@ -53,6 +75,15 @@ class he_ansatz(base_ansatz):
         return
     
 
+
+    """
+    Circuito pararametrizado con el ansatz
+    input:
+        theta: vector de parametros del circuito
+        obs: observable (en representacion de pennylane)
+    output:
+        valor: valor esperado del observable obs ingresado
+    """
     def circuit(self, theta, obs):
         qml.StatePrep(self.begin_state, wires=range(self.qubits))
         rotation_number = self.qubits
@@ -64,6 +95,13 @@ class he_ansatz(base_ansatz):
         return qml.expval(obs)
 
 
+    """
+    Circuito para obtener el estado al final del circuito
+    input:
+        theta: vector de parametros del circuito
+    output:
+        estado: retorna el estado del circuito como un arreglo numpy
+    """
     def circuit_state(self, theta):
         qml.StatePrep(self.begin_state, wires=range(self.qubits))
         rotation_number = self.qubits

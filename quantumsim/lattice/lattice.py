@@ -2,16 +2,14 @@ import networkx as nx
 
 
 '''
+Funcion que retorna las coordenadas de los nodos del grafo que contruyen la grilla del sistema
 input:
     params: diccionario con los parametros de la lattice
-        -tipo de lattice
-        -tamaño: tupla
-        -periodicidad
 return:
-    list of the graph's edges
+    edges: lista con las conexiones entre los nodos
+    node: lista con los nodos del sistema
 '''
 def lattice(params):
-
     periodicity = False
     if isinstance(params['bound'], list):
         periodicity = params['bound']
