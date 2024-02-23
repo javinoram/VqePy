@@ -47,7 +47,7 @@ Source = "https://github.com/javinoram/VqePy"
 website = "https://github.com/javinoram/VqePy"
 
 [tool.setuptools_scm]
-write_to = "plasmapy/_version.py"
+write_to = "quantumsim/_version.py"
 
 [tool.setuptools]
 include-package-data = true
