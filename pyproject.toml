@@ -6,15 +6,13 @@ requires = [
   "wheel >= 0.37.0",
 ]
 
-[metadata]
+[project]
 name = "vqepy"
 author = "Javier Norambuena Leiva"
 author_email = "javier.norambuenal@sansano.usm.cl"
 description = "An open source Python package for molecular and condensed matter VQE research"
 readme = "README.md"
-license = {file = "LICENSE.md"}
-url = "https://github.com/javinoram/VqePy"
-project_url = { repository = "https://github.com/javinoram/VqePy" }
+license = {file = "LICENSE.txt"}
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -22,6 +20,10 @@ classifiers = [
 ]
 python_requires = ">=3.10"
 dynamic = [ "version", ]
+
+[project.urls]
+Source = "https://github.com/javinoram/VqePy"
+website = "https://github.com/javinoram/VqePy"
 
 [tool.setuptools]
 include-package-data = true
