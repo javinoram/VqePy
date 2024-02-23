@@ -3,19 +3,20 @@ requires = ['setuptools>=42']
 build-backend = 'setuptools.build_meta'
 
 [metadata]
-name = vqepy
-author = Javier Norambuena Leiva
-author_email = javier.norambuenal@sansano.usm.cl
-description = An open source Python package for molecular and condensed matter VQE research
-long_description = file: README.md, LICENCE.txt
-long_description_content_type = text/markdown
-url = https://github.com/javinoram/VqePy
-project_url = 
-    repository = https://github.com/javinoram/VqePy 
-classifiers =
-    Programming Language :: Python :: 3
-    License :: OSI Approved :: MIT License
-    Operating System :: OS Independent
+name = "vqepy"
+author = "Javier Norambuena Leiva"
+author_email = "javier.norambuenal@sansano.usm.cl"
+description = "An open source Python package for molecular and condensed matter VQE research"
+readme = "README.md"
+license = {file = "LICENSE.md"}
+url = "https://github.com/javinoram/VqePy"
+project_url = { repository = "https://github.com/javinoram/VqePy" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dynamic = [ "version", ]
 
 [options]
 package_dir = 
