@@ -30,6 +30,7 @@ jobs:
     - name: Update pyproject.toml
       run: |
         sed -i "s/version = .*/version = \"${TAG_NAME#v}\"/" pyproject.toml
+        cat pyproject.toml
           
     - name: Build package
       run: python -m build
