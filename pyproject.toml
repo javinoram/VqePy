@@ -23,17 +23,6 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dynamic = [ "version", ]
-
-[project.urls]
-Source = "https://github.com/javinoram/VqePy"
-website = "https://github.com/javinoram/VqePy"
-
-[tool.setuptools]
-include-package-data = true
-
-[tool.setuptools.package-data]
-"vqepy.quantumsim" = ["*"]
-
 dependencies = [
     "pyscf",
     "numpy",
@@ -52,3 +41,13 @@ dependencies = [
     "jaxopt",
     "optax",
 ]
+
+[project.urls]
+Source = "https://github.com/javinoram/VqePy"
+website = "https://github.com/javinoram/VqePy"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"vqepy.quantumsim" = ["*"]
