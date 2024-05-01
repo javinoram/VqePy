@@ -1,6 +1,5 @@
 import pennylane as qml
-from pennylane import numpy as np
-from .base import *
+from .base import base_ansatz
 
 
 """

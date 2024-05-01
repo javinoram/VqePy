@@ -1,6 +1,5 @@
 import pennylane as qml
-from pennylane import numpy as np
-from .base import *
+from .base import base_ansatz
 
 
 """
@@ -39,7 +38,6 @@ class custom_ansatz(base_ansatz):
         if singles != None:
             for term in singles:
                 self.excitations.append(term)
-        return
     
 
     """

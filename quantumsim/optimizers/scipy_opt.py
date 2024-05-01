@@ -1,8 +1,6 @@
-import pennylane as qml
 import scipy as sc
 import warnings
 from pennylane import numpy as np
-from quantumsim.optimizers import *
 
 class TookTooManyIters(Warning):
     pass

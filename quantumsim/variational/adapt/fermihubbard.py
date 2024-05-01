@@ -1,4 +1,8 @@
-from .base import *
+from .base import adap_base
+import pennylane as qml
+from quantumsim.lattice import lattice
+from pennylane import numpy as np
+from pennylane import FermiC, FermiA
 
 """
 Clase del modelo de Fermi Hubbard, esta se encarga de construir el hamiltoniano,
@@ -66,10 +70,8 @@ class adap_fermihubbard(adap_base):
         coeff, terms = qml.jordan_wigner( fermi_sentence, ps=True ).hamiltonian().terms()
 
         #Eliminar terminos cuyos coefficientes son 0
-        to_delete = []
-        for i,c in enumerate(coeff):
-            if c==0.0:
-                to_delete.append(i)
+        to_delete = [i for i,c in enumerate(coeff) if np.abs(c)<1e-10 ]
+        for i,_ in enumerate(coeff):
             if isinstance(terms[i], qml.Identity):
                 terms[i] = qml.Identity(wires=[0])
         
@@ -80,4 +82,3 @@ class adap_fermihubbard(adap_base):
 
         #Almacenar hamiltoniano
         self.hamiltonian = qml.Hamiltonian(np.real(np.array(coeff)), terms)
-        return

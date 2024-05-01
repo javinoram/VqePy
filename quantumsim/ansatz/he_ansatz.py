@@ -1,6 +1,5 @@
 import pennylane as qml
-from pennylane import numpy as np
-from .base import *
+from .base import base_ansatz
 
 """
 Clase de ansatz hardware efficient, esta construido para ser usado en sistemas de espines, 
@@ -33,7 +32,6 @@ class he_ansatz(base_ansatz):
     def single_rotation(self, params):
         for i in range(0, self.qubits):
             qml.RY(params[i], wires=[i])
-        return
 
 
     """
@@ -42,37 +40,34 @@ class he_ansatz(base_ansatz):
     input:
         flag: valor entero para determinar si se quieren colocar las compuertas en orden inverso o no
     """
-    def non_local_gates(self, flag=0):
+    def non_local_gates(self):
         ## Compuertas en orden normal
-        if flag == 0:
-            if self.pattern == 'chain':
+        if self.pattern == 'chain':
+            for i in range(0, self.qubits-1):
+                qml.CNOT(wires=[i, i+1])
+
+        elif self.pattern == 'ring':
+            if self.qubits == 2:
+                qml.CNOT(wires=[0, 1])
+            else:
                 for i in range(0, self.qubits-1):
                     qml.CNOT(wires=[i, i+1])
+                qml.CNOT(wires=[self.qubits-1, 0])  
 
-            elif self.pattern == 'ring':
-                if self.qubits == 2:
-                    qml.CNOT(wires=[0, 1])
-                else:
-                    for i in range(0, self.qubits-1):
-                        qml.CNOT(wires=[i, i+1])
-
-                    qml.CNOT(wires=[self.qubits-1, 0])  
-
+    def non_local_gates_inverse(self):
         #Compuertas en orden inverso (la operacion inversa)
-        else:
-            if self.pattern == 'chain':
+        if self.pattern == 'chain':
+            for i in range(self.qubits-1,0,-1):
+                qml.CNOT(wires=[i-1, i])
+
+        elif self.pattern == 'ring':
+            if self.qubits == 2:
+                qml.CNOT(wires=[0, 1])
+            else:
+                qml.CNOT(wires=[self.qubits-1, 0])      
                 for i in range(self.qubits-1,0,-1):
                     qml.CNOT(wires=[i-1, i])
 
-            elif self.pattern == 'ring':
-                if self.qubits == 2:
-                    qml.CNOT(wires=[0, 1])
-                else:
-                    qml.CNOT(wires=[self.qubits-1, 0])  
-                        
-                    for i in range(self.qubits-1,0,-1):
-                        qml.CNOT(wires=[i-1, i])
-        return
     
 
 
@@ -90,7 +85,7 @@ class he_ansatz(base_ansatz):
         for k in range(0, self.repetition):
             params = theta[k*rotation_number:(k+1)*rotation_number]
             self.single_rotation(params)
-            self.non_local_gates(0)
+            self.non_local_gates()
             
         return qml.expval(obs)
 
@@ -108,6 +103,6 @@ class he_ansatz(base_ansatz):
         for k in range(0, self.repetition):
             params = theta[k*rotation_number:(k+1)*rotation_number]
             self.single_rotation(params)
-            self.non_local_gates(0)
+            self.non_local_gates()
         return qml.state()
 

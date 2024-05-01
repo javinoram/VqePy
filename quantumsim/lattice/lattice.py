@@ -10,11 +10,7 @@ return:
     node: lista con los nodos del sistema
 '''
 def lattice(params):
-    periodicity = False
-    if isinstance(params['bound'], list):
-        periodicity = params['bound']
-    elif params['bound'] == True:
-        periodicity = params['bound']
+    periodicity = params['bound']
 
     if params['lattice'] == 'chain':
         lattice = nx.grid_2d_graph(params['size'][0], params['size'][1], periodicity)

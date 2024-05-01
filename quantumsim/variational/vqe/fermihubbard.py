@@ -1,4 +1,8 @@
-from .base import *
+from .base import vqe_base
+from quantumsim.lattice import lattice
+from pennylane import FermiC, FermiA
+import pennylane as qml
+from pennylane import numpy as np
 
 """
 Clase para construir el hamiltoniano usado en el proceso de VQE, hereda metodos de la clase
@@ -65,10 +69,8 @@ class vqe_fermihubbard(vqe_base):
         coeff, terms = qml.jordan_wigner( fermi_sentence, ps=True ).hamiltonian().terms()
 
         #Eliminar terminos cuyos coefficientes son 0
-        to_delete = []
-        for i,c in enumerate(coeff):
-            if c==0.0:
-                to_delete.append(i)
+        to_delete = [i for i,c in enumerate(coeff) if np.abs(c)<1e-10 ]
+        for i,_ in enumerate(coeff):
             if isinstance(terms[i], qml.Identity):
                 terms[i] = qml.Identity(wires=[0])
         
@@ -79,4 +81,3 @@ class vqe_fermihubbard(vqe_base):
 
         #Almacenar hamiltoniano
         self.hamiltonian = qml.Hamiltonian(np.real(np.array(coeff)), terms)
-        return

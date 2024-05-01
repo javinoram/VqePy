@@ -1,5 +1,4 @@
 import pennylane as qml
-from pennylane import numpy as np
 import jax
 
 """
@@ -25,33 +24,31 @@ class base_ansatz():
         del circuito
     """
     def set_device(self, params) -> None:
-        self.base = params['base']
         self.qubits = params["qubits"]
+        self.base = params['base']
 
         ##Maquinas reales
         if self.base == 'qiskit.ibmq':
-            if params['backend']:
+            try:
                 self.backend = params['backend']
-            else:
-                raise Exception("Backend no encontrado")
-            if params['token']:
                 self.token = params['token']
                 self.device= qml.device(self.base, backend=self.backend, 
                     wires=self.qubits,  ibmqx_token= self.token)
-            else:
-                raise Exception("Token de acceso no encontrado")
+            except KeyError:
+                print( "Parametro no encontrado, recuerde agregar backend y token" )
+
         ##Simuladores de qiskit
         elif self.base == "qiskit.aer":
-            if params['backend']:
+            try: 
                 self.backend = params['backend']
-            else:
-                raise Exception("Backend no encontrado")
-            
-            self.device= qml.device(self.base, backend=self.backend, wires=self.qubits)
+                self.device= qml.device(self.base, backend=self.backend, wires=self.qubits)
+                self.device= qml.device(self.base, backend=self.backend, wires=self.qubits)
+            except KeyError:
+                print( "Parametro no encontrado, recuerde agregar backend" )
+    
         ##Simuladores de pennylane
         else:
             self.device= qml.device(self.base, wires=self.qubits)
-        return
     
     """
     Funcion para setear caracteristicas del ejecutor del circuito
@@ -71,12 +68,9 @@ class base_ansatz():
         if params['diff_method']:
             self.diff_method = params['diff_method']
         
-        if params['interface'] == "jax" or params['interface'] == "jax-jit":
-            node = qml.QNode(self.circuit, self.device, interface=self.interface, diff_method=self.diff_method)
-            self.node = jax.jit(node)
-        else:
-            self.node = qml.QNode(self.circuit, self.device, interface=self.interface, diff_method=self.diff_method)
-        return
+        self.node = qml.QNode(self.circuit_state, self.device, interface=self.interface, diff_method=self.diff_method)
+        if self.interface == "jax" or self.interface == "jax-jit":
+            self.node = jax.jit(self.node)
     
 
     """
@@ -88,9 +82,7 @@ class base_ansatz():
         estado: retorna el estado del circuito como un arreglo numpy
     """
     def get_state(self, theta):
+        node = qml.QNode(self.circuit_state, self.device, interface=self.interface, diff_method=self.diff_method)
         if self.interface == "jax" or self.interface == "jax-jit":
-            node = qml.QNode(self.circuit_state, self.device, interface=self.interface, diff_method=self.diff_method)
             node = jax.jit(node)
-        else:
-            node = qml.QNode(self.circuit_state, self.device, interface=self.interface, diff_method=self.diff_method)
         return node(theta)

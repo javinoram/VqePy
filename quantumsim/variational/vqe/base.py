@@ -1,7 +1,4 @@
-from quantumsim.ansatz import *
-from quantumsim.lattice import *
-from pennylane import qchem
-from pennylane import FermiC, FermiA
+import pennylane as qml
 import itertools
 
 """
@@ -27,7 +24,6 @@ class vqe_base():
     def set_node(self, node, interface) -> None:
         self.node = node
         self.interface = interface
-        return
     
 
     """

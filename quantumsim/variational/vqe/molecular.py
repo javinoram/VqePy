@@ -1,4 +1,5 @@
-from .base import *
+from .base import vqe_base
+from pennylane import qchem
 
 """
 Clase para construir el hamiltoniano usado en el proceso de VQE, hereda metodos de la clase
@@ -15,7 +16,6 @@ class vqe_molecular(vqe_base):
     method='dhf'
     active_electrons = None
     active_orbitals = None
-
 
     """
     Constructor de la clase
@@ -57,5 +57,4 @@ class vqe_molecular(vqe_base):
             active_electrons=self.active_electrons, 
             active_orbitals=self.active_orbitals,
             load_data=True)
-        return
 
