@@ -105,3 +105,23 @@ class adap_base():
                 qml.SingleExcitation(params[i], wires=gate)
         return qml.expval(self.hamiltonian)
 
+
+    """
+    Funcion para calcular los valores y vectores propios del hamiltoniano
+    output:
+        ee: vectores propios del hamiltoniano ordenados de menor a mayor
+        vv: vectores propios del hamiltoniano, para acceder a ellos usar vv[:,i]
+    """
+    def energies_and_states(self):
+        H = np.array( qml.matrix(self.hamiltonian, wire_order=[i for i in range(self.qubits)]) )
+        ee, vv = np.linalg.eigh(H)
+        return ee,vv
+    
+
+    """
+    Funcion para calcular la matriz asociada al hamiltoniano
+    output:
+        Arreglo de numpy con la representacion matricial del hamiltoniano
+    """
+    def get_matrix(self):
+        return np.array( qml.matrix(self.hamiltonian, wire_order=[i for i in range(self.qubits)]) )
