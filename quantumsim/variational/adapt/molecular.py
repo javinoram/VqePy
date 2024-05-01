@@ -1,4 +1,5 @@
-from .base import *
+from .base import adap_base
+from pennylane import qchem
 
 """
 Clase del modelo de moleculas, esta se encarga de construir el hamiltoniano,
@@ -56,4 +57,3 @@ class adap_molecular(adap_base):
             active_electrons=self.active_electrons, 
             active_orbitals=self.active_orbitals,
             load_data=True)
-        return

@@ -1,7 +1,5 @@
 import pennylane as qml
-from pennylane import numpy as np
-from .base import *
-
+from .base import base_ansatz
 
 """
 Clase de ansatz UCCSD, esta construido para ser usado en molecules y modelo de Fermi-Hubbard, 

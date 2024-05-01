@@ -1,6 +1,4 @@
-import pyscf
 from pyscf import gto, scf, ci, cc
-import numpy as np
 import pennylane as qml
 
 """
@@ -30,10 +28,10 @@ input:
 output:
     estado: arreglo de numpy del estado inicial calculado usando tecnicas clasicas
 """
-def CISD_state(elements, coordinates, params):
+def cisd_state(elements, coordinates, params):
     atom = []
     for i in range( len(elements) ):
-        atom.append( [elements[i], (( coordinates[3*i], coordinates[3*i+1], coordinates[3*i+2] )) ] )
+        atom.append( [elements[i], (coordinates[3*i], coordinates[3*i+1], coordinates[3*i+2]) ] )
    
     basis = remove_special_characters( params["basis"] )
     mol = gto.M(atom=atom, charge=params["charge"], basis=basis, unit="B")
@@ -52,10 +50,10 @@ input:
 output:
     estado: arreglo de numpy del estado inicial calculado usando tecnicas clasicas
 """
-def CCSD_state(elements, coordinates, params):
+def ccsd_state(elements, coordinates, params):
     atom = []
     for i in range( len(elements) ):
-        atom.append( [elements[i], (( coordinates[3*i], coordinates[3*i+1], coordinates[3*i+2] )) ] )
+        atom.append( [elements[i], (coordinates[3*i], coordinates[3*i+1], coordinates[3*i+2]) ] )
    
     mol = gto.M(atom=atom, charge=params["charge"], unit="B")
     myhf = scf.RHF(mol).run()

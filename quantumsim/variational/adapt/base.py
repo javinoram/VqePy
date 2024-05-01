@@ -1,9 +1,6 @@
 import pennylane as qml
-from pennylane import numpy as np
-from quantumsim.ansatz import *
-from quantumsim.lattice import *
-from pennylane import qchem
-from pennylane import FermiC, FermiA
+import jax as jax
+
 
 """
 Clase base del proceso ADAPT-VQE, en esta se almacenan las variables y funciones generales, que son 
@@ -33,28 +30,26 @@ class adap_base():
 
         ##Maquinas reales
         if self.base == 'qiskit.ibmq':
-            if params['backend']:
+            try:
                 self.backend = params['backend']
-            else:
-                raise Exception("Backend no encontrado")
-            if params['token']:
                 self.token = params['token']
                 self.device= qml.device(self.base, backend=self.backend, 
                     wires=self.qubits,  ibmqx_token= self.token)
-            else:
-                raise Exception("Token de acceso no encontrado")
+            except KeyError:
+                print( "Parametro no encontrado, recuerde agregar backend y token" )
+
         ##Simuladores de qiskit
         elif self.base == "qiskit.aer":
-            if params['backend']:
+            try: 
                 self.backend = params['backend']
-            else:
-                raise Exception("Backend no encontrado")
-            
-            self.device= qml.device(self.base, backend=self.backend, wires=self.qubits)
+                self.device= qml.device(self.base, backend=self.backend, wires=self.qubits)
+                self.device= qml.device(self.base, backend=self.backend, wires=self.qubits)
+            except KeyError:
+                print( "Parametro no encontrado, recuerde agregar backend" )
+    
         ##Simuladores de pennylane
         else:
             self.device= qml.device(self.base, wires=self.qubits)
-        return
 
 
     """
@@ -69,13 +64,9 @@ class adap_base():
         if params['repetitions']:
             self.repetition = params['repetitions']
 
-            
-        if params['interface'] == "jax" or params['interface'] == "jax-jit":
-            node = qml.QNode(self.circuit, self.device, interface=params['interface'])
-            self.node = jax.jit(node)
-        else:
-            self.node = qml.QNode(self.circuit, self.device, interface=params['interface'])
-        return
+        self.node = qml.QNode(self.circuit_state, self.device, interface=self.interface, diff_method=self.diff_method)
+        if self.interface == "jax" or self.interface == "jax-jit":
+            self.node = jax.jit(self.node)
     
 
     """

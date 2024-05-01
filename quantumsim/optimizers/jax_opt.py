@@ -1,11 +1,9 @@
-import pennylane as qml
-import jax
+import jax as jax
 import jax.numpy as jnp
-import optax
+import optax as optax
 jax.config.update("jax_enable_x64", True)
 
 from pennylane import numpy as np
-from quantumsim.optimizers import *
 
 
 """

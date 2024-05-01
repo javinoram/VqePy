@@ -1,4 +1,7 @@
-from .base import *
+from .base import vqe_base
+from quantumsim.lattice import lattice
+from pennylane import numpy as np
+import pennylane as qml
 
 """
 Clase para construir el hamiltoniano usado en el proceso de VQE, hereda metodos de la clase
@@ -42,11 +45,7 @@ class vqe_spin(vqe_base):
                     coeff.extend( [params["h"][0]/2.0, params["h"][1]/2.0, params["h"][2]/2.0] )
         
         #Eliminar terminos cuyos coefficientes son 0
-        to_delete = []
-        for i,c in enumerate(coeff):
-            if c==0.0:
-                to_delete.append(i)
-        
+        to_delete = [i for i,c in enumerate(coeff) if np.abs(c)<1e-10 ]
         to_delete = -np.sort(-np.array(to_delete))
         for index in to_delete:
             coeff.pop(index)
@@ -54,5 +53,4 @@ class vqe_spin(vqe_base):
 
         #Almacenar hamiltonianos
         self.hamiltonian = qml.Hamiltonian(np.real(np.array(coeff)), terms)
-        return
     

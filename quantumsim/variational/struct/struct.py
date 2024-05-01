@@ -68,7 +68,6 @@ class structure_molecular():
             load_data=True)
         
         self.begin_state = qml.qchem.hf_state(self.active_electrons, self.qubits)
-        return
     
 
     """
@@ -80,7 +79,6 @@ class structure_molecular():
     def set_node(self, node, interface) -> None:
         self.node = node
         self.interface = interface
-        return
     
 
     """

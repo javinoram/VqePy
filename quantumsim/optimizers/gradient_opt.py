@@ -1,6 +1,5 @@
 import pennylane as qml
 from pennylane import numpy as np
-from quantumsim.optimizers import *
 
 """
 Clase del optimizador de gradiente (gradientes implementados en la libreria pennylane), 
