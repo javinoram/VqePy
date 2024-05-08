@@ -1,5 +1,3 @@
-from quantumsim.ansatz import *
-from quantumsim.optimizers import *
 from pennylane import qchem
 from pennylane import numpy as np
 
@@ -64,8 +62,7 @@ class structure_molecular():
             basis= self.basis,
             method= self.method,
             active_electrons=self.active_electrons,
-            active_orbitals=self.active_orbitals,
-            load_data=True)
+            active_orbitals=self.active_orbitals)
         
         self.begin_state = qml.qchem.hf_state(self.active_electrons, self.qubits)
     
@@ -93,7 +90,7 @@ class structure_molecular():
         delta = 0.01
         n = len(x)
         shift = np.eye( n ) * 0.5 * delta
-        grad = [ self.node( theta=theta, obs=((self.H(x + shift[i]) - self.H(x - shift[i])) / delta) ) for i in range(n)]
+        grad = [ self.node( theta=theta, obs=((self.hamiltonian_x(x + shift[i]) - self.hamiltonian_x(x - shift[i])) / delta) ) for i in range(n)]
         return np.array(grad)
     
 
@@ -104,8 +101,8 @@ class structure_molecular():
     output:
         h: hamiltoniano molecular
     """
-    def H(self, x):
-        h, q = qchem.molecular_hamiltonian(symbols= self.symbols,
+    def hamiltonian_x(self, x):
+        h, _ = qchem.molecular_hamiltonian(symbols= self.symbols,
             coordinates= x,
             mapping= self.mapping,
             charge= self.charge,
@@ -113,8 +110,7 @@ class structure_molecular():
             basis= self.basis,
             method= self.method,
             active_electrons=self.active_electrons,
-            active_orbitals=self.active_orbitals,
-            load_data=True)
+            active_orbitals=self.active_orbitals)
         return h   
 
 
@@ -127,6 +123,6 @@ class structure_molecular():
         result: evaluacion de la funcion de coste dado theta y x.
     """
     def cost_function(self, theta, x):
-        hamiltonian = self.H(x)
+        hamiltonian = self.hamiltonian_x(x)
         result = self.node( theta=theta, obs=hamiltonian )
         return result
