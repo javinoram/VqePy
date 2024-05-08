@@ -9,8 +9,8 @@ pennylane-qiskit
 qiskit_ibm_provider
 pyyaml
 networkx
-basis-set-exchange
 ipykernel
 pennylane-lightning
 jaxopt
 optax
+pytest

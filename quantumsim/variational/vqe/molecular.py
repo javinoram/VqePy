@@ -55,6 +55,5 @@ class vqe_molecular(vqe_base):
             basis= self.basis,
             method= self.method,
             active_electrons=self.active_electrons, 
-            active_orbitals=self.active_orbitals,
-            load_data=True)
+            active_orbitals=self.active_orbitals)
 
